@@ -1,0 +1,1394 @@
+\documentclass{ltxdockit}
+\usepackage{btxdockit}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[strict]{csquotes}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{shortvrb}
+\usepackage{pifont}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{bashstyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\ttfamily\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2,
+	frame=single,
+	language=bash
+}
+
+\lstset{style=bashstyle}
+
+\newcommand*{\munics}{\emph{MUniCS Master's Thesis}\xspace}
+
+\titlepage{%
+	title={SEGURIDAD DE REDES},
+	subtitle={Laboratorio 6 y 7 - Control de Acceso y Fortificación Ethernet},
+	url={},
+	author={Estela Pillo González   \\ Orlando J. Garcés Casal \\ Simón Noya Dominguez \\ Alvaro Cainzos Urtiaga \\ Brais Gómez Espiñeira  },
+	email={ estela.pgonzalez@udc.es \\ o.garces@udc.es \\ simon.noyad@udc.es \\ alvaro.cainzos@udc.es \\ brais.gomez2@udc.es },
+	revision={1.0},
+	date={\today}}
+
+\hypersetup{%
+	pdftitle={Documentación de Laboratorios de Seguridad de Redes},
+	pdfsubject={Laboratorios 6 y 7 - Control de Acceso y Fortificación Ethernet},
+	pdfauthor={Nombre del Estudiante},
+	pdfkeywords={redes, seguridad, ethernet, cisco, switching}}
+
+\begin{document}
+	
+	\printtitlepage
+	\tableofcontents
+	
+	\section{Introducción}
+	\label{sec:intro}
+	
+	\subsection[About]{Sobre esta Documentación}
+	\label{sec:intro:about}
+	
+	Esta documentación recoge la implementación y resultados de los Laboratorios 6 y 7 de Seguridad de Redes, centrados en el control de acceso a dispositivos de red y la fortificación de la capa de acceso Ethernet.
+	
+
+	
+	\section{Laboratorio 6: Despliegue de mecanismos de control de acceso a la gestión de los dispositivos de red}
+	\label{sec:lab6}
+	
+	\subsection{Objetivos}
+	\label{sec:lab6:objetivos}
+	
+	\begin{itemize}
+		\item Parte 1: Desplegar un sistema de autenticación y autorización tolerante a fallos
+		\item Parte 2: Configurar los dispositivos de red para utilizar dicho sistema de autenticación y autorización
+	
+	\end{itemize}
+	
+	\subsection{Configuración del servidor Radius}
+	\label{sec:lab6:radius}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/lab6/radius1.png}
+		\caption{Instalación de freeradius}
+		\label{fig:radius_instalacion}
+	\end{figure}
+	
+	A continuación se configura el archivo /etc/freeradius/3.0/users.conf:
+	
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/lab6/radius2.png}
+		\caption{Configuración /etc/freeradius/3.0/users.conf }
+		\label{fig:radius2}
+	\end{figure}
+	
+	Luego configuramos el archivo /etc/freeradius/3.0/clients.conf, en el cual se incluyen los dispositivos que actúan como clientes radius:
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/lab6/radius3.png}
+		\caption{Configuración /etc/freeradius/3.0/clients.conf}
+		\label{fig:radius3}
+	\end{figure}
+	
+	Comprobación de que el servidor está funcionando:
+	
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/lab6/radius4.png}
+		\caption{Comprobación funcionamiento}
+		\label{fig:radius4}
+	\end{figure}
+	
+	
+	
+	\subsection{Configuración de acceso al servidor Radius en los dispositivos}
+	\label{sec:lab6:config}
+	
+	La configuración es la misma, por lo que se muestra la configuración específica para AL-SW1:
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/cracionradius.png}
+		\caption{Configuración del servidor RADIUS en AL-SW1}
+		\label{fig:config-radius-al-sw1}
+	\end{figure}
+	
+	Se configuró el sistema AAA completo con autenticación, autorización y accounting, estableciendo el grupo RADIUS como método primario y la base local como respaldo.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/aaa_comands.png}
+		\caption{Configuración AAA en AL-SW1}
+		\label{fig:aaa-config-al-sw1}
+	\end{figure}
+	
+	Para garantizar el acceso en caso de fallo del servidor RADIUS, se crearon usuarios locales con diferentes niveles de privilegio.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/Usuarioslocales_clavesssh.png}
+		\caption{Configuración de usuarios locales y claves SSH}
+		\label{fig:usuarios-locales-al-sw1}
+	\end{figure}
+	
+	La seguridad del acceso remoto se reforzó mediante la configuración de SSH versión 2 con algoritmos de cifrado seguros.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/ssh.png}
+		\caption{Configuración SSH segura en AL-SW1}
+		\label{fig:ssh-config-al-sw1}
+	\end{figure}
+	
+	Se implementaron listas de control de acceso (ACL) para restringir el acceso únicamente desde la VLAN de administración.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/acl.png}
+		\caption{Configuración de ACL para restricción de acceso}
+		\label{fig:acl-config-al-sw1}
+	\end{figure}
+	
+	Finalmente, se configuraron las líneas VTY para utilizar SSH exclusivamente y aplicar la autenticación AAA configurada.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/ssh_vty}
+		\caption{Configuración de líneas VTY }
+		\label{fig:vty-config-al-sw1}
+	\end{figure}
+	
+
+	\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/al_prueba_autenticacion}
+	\caption{Prueba de funcionamiento }
+	\label{fig:al_prueba_autenticacion}
+	\end{figure}
+
+
+	
+	\subsubsection{Switch de Distribución DL-SW1}
+	\label{sec:lab6:config:dl-sw1}
+	
+	DL-SW1 se configuró con parámetros similares a AL-SW1 pero con restricciones adicionales de acceso mediante ACL. Se implementó control de acceso por dirección IP, permitiendo únicamente conexiones desde la VLAN de administración. La configuración AAA incluye accounting para auditoría de sesiones.
+	
+	La configuración en DL-SW1 siguió la misma estructura que AL-SW1:
+	\begin{itemize}
+		\item Configuración del servidor RADIUS con la misma IP y clave
+		
+			\begin{figure}[H]
+			\centering
+			\includegraphics[width=0.8\textwidth]{images/configuracion aaa.png}
+			\caption{Configuracion servidor radius}
+			\label{fig:vty-verify-al-sw1}
+		\end{figure}
+		
+		A la hora de utilizar el comando para darle nombre al grupo de radius, tuvimos una pequeña errata y lo nombramos como RADIUS-GROUP a pesar de que debia haberse llamado radius. Dicha errata se corrigió posteriormente.
+		
+		\item Sistema AAA con autenticación, autorización y accounting
+		\item Usuarios locales de respaldo con los mismos nombres y privilegios
+		\item Configuración SSH segura con restricciones de acceso
+		\item ACL para limitar el acceso a la VLAN de administración
+	\end{itemize}
+	
+	\subsection{Configuración para Routers}
+	\label{sec:lab6:config:routers}
+	
+	\subsubsection{Firewall (FW)}
+	\label{sec:lab6:config:fw}
+	
+	El firewall se configuró con autenticación RADIUS para acceso administrativo. Se implementaron las mismas políticas de seguridad que en los switches, con usuarios locales de respaldo y restricción de acceso por dirección IP. La configuración SSH incluye algoritmos de cifrado seguros.
+	
+	Configuración aplicada en FW:
+	\begin{itemize}
+		\item Servidor RADIUS: 192.168.1.10 puertos 1645/1646
+		\item Clave RADIUS: Bayern\_2025
+		\item Usuarios locales: juniorAdmin (nivel 1) y admin (nivel 15)
+		\item ACL restrictiva para acceso desde VLAN de administración
+		\item SSH versión 2 exclusivo para acceso remoto
+	\end{itemize}
+	
+	\subsubsection{ISP Router}
+	\label{sec:lab6:config:isp}
+	
+	El router ISP se configuró con autenticación centralizada RADIUS y usuarios locales. Se implementó control de acceso mediante ACL para restringir las conexiones únicamente a la red de gestión. La configuración incluye parámetros de seguridad reforzados para SSH.
+	
+	Elementos de configuración en ISP:
+	\begin{itemize}
+		\item Autenticación RADIUS con fallback a local
+		\item Restricción de acceso por dirección IP fuente
+		\item Configuración SSH con módulo RSA 2048 bits
+		\item Accounting para registro de sesiones administrativas
+	\end{itemize}
+	
+	\subsubsection{CPE Router}
+	\label{sec:lab6:config:cpe}
+	
+	En el CPE router se aplicó la misma política de seguridad que en los demás dispositivos. Configuración RADIUS con fallback a autenticación local, restricción de acceso por IP y habilitación exclusiva de SSH como protocolo de acceso remoto.
+	
+	Configuración implementada en CPE:
+	\begin{itemize}
+		\item Grupo de servidores RADIUS configurado
+		\item AAA con autenticación por defecto hacia RADIUS
+		\item Usuarios locales para contingencia
+		\item Líneas VTY restringidas por ACL y solo SSH
+	\end{itemize}
+	
+
+	
+	\section{Laboratorio 7: Fortificación en la capa de acceso en redes Ethernet}
+	\label{sec:lab7}
+	
+	
+
+	
+\subsection{Parte 1: Evaluación de Vulnerabilidades}
+\label{sec:lab7:vulnerabilidades}
+
+\subsubsection{Saturación de Tabla CAM}
+\label{sec:lab7:vuln:cam}
+
+\textbf{Objetivo:} Saturar la tabla de direcciones MAC del switch AL-SW1 para forzarlo a funcionar como un hub, comprometiendo la confidencialidad del tráfico de red.
+
+\textbf{Herramienta utilizada:} Herramienta de generación de tráfico (macof)
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/mac_table.png}
+	\caption{Estado inicial de la tabla MAC en AL-SW1 antes del ataque}
+	\label{fig:mac-table-initial}
+\end{figure}
+
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/macof_attack.png}
+	\caption{Ataque macof desde yersinia}
+	\label{fig:macof-attack}
+\end{figure}
+
+
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/camtable1.png}
+	\caption{Tabla CAM saturada con múltiples direcciones MAC falsas en el puerto Gi0/11}
+	\label{fig:cam-table-saturation}
+\end{figure}
+
+\subsubsection{Explotación de Protocolos Capa 2 con Yersinia}
+\label{sec:lab7:vuln:yersinia}
+
+\textbf{Objetivo:} Explotar vulnerabilidades en protocolos de capa 2 para tomar control de la topología de red, obtener información sensible y establecer conexiones no autorizadas.
+
+\textbf{Herramienta utilizada:} Yersinia
+
+\begin{itemize}
+	\item \textbf{STP:} Inyección de BPDUs para convertirse en root bridge
+	\item \textbf{CDP:} Obtención de información sensible de dispositivos vecinos
+	\item \textbf{DTP:} Establecimiento de enlaces troncales no autorizados
+	\item \textbf{DHCP:} Suplantación de servidor DHCP legítimo
+\end{itemize}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/stp_attack.png}
+	\caption{Ataque STP - Creación y envío de BPDUs falsos con Scapy para convertirse en root bridge}
+	\label{fig:stp-attack}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/stp_attack_AL.png}
+	\caption{Efecto del ataque STP: AL-SW1 reconoce un nuevo root bridge con ID 0}
+	\label{fig:stp-attack-al}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/stp_return_to_normal.png}
+	\caption{Recuperación de la topología STP legítima después del ataque}
+	\label{fig:stp-recovery}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/cpd_attack_kali.png}
+	\caption{Ataque CDP desde Kali Linux - Flooding de la tabla CDP}
+	\label{fig:cdp-attack-kali}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/cpd_attack_putty.png}
+	\caption{Información CDP comprometida: Múltiples dispositivos falsos aparecen como vecinos}
+	\label{fig:cdp-attack-putty}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/dtp_kali.png}
+	\caption{Ataque DTP desde Kali Linux - Activación de trunking no autorizado}
+	\label{fig:dtp-attack-kali}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/dtp_ataque_wireshark.png}
+	\caption{Paquetes DTP en wireshark cuando realizamos el ataque}
+	\label{fig:dtp-attack-wireshark}
+\end{figure}
+
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/dtp_putty.png}
+	\caption{Enlace troncal no autorizado establecido en Gi0/2 mediante ataque DTP}
+	\label{fig:dtp-attack-putty}
+\end{figure}
+
+
+
+\subsubsection{Ataques ARP - Man in the Middle}
+\label{sec:lab7:vuln:arp}
+
+\textbf{Objetivo:} Interceptar y redirigir el tráfico entre dos hosts mediante envenenamiento de tablas ARP, permitiendo la interceptación de comunicaciones.
+
+\textbf{Herramienta utilizada:} arpspoof y habilitación de IP forwarding
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/mitm_1.png}
+	\caption{Configuración inicial: Habilitación de IP forwarding y envenenamiento ARP hacia el gateway (10.4.16.1)}
+	\label{fig:mitm-1}
+\end{figure}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/mitm_2.png}
+	\caption{Envenenamiento ARP hacia la víctima (10.4.16.8) para completar el ataque MitM}
+	\label{fig:mitm-2}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/mitm_3.png}
+	\caption{Tabla ARP comprometida: Ambos hosts (10.4.16.1 y 10.4.16.8) apuntan a la MAC del atacante}
+	\label{fig:mitm-3}
+\end{figure}
+	
+	\subsubsection{Ataque DHCP}
+		% LAB7 - DHCP
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/1-conexion_DHCP.png}
+		\caption{Configuración inicial de la dirección IP estática en la interfaz eth0 (10.4.18.11/24) y limpieza de configuraciones previas}
+		\label{fig:conexion_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/2-Arreglo_ip_DHCP.png}
+		\centering
+		\caption{Configuración de la ruta por defecto a través del gateway 10.4.18.1 para permitir el enrutamiento}
+		\label{fig:arreglo_ip_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/3-subnet_inicial_DHCP.png}
+		\caption{Configuración inicial del servidor DHCP con definición de subredes para VLAN 16 (alumnos), VLAN 17 (PDI) y VLAN 18 (PAS)}
+		\label{fig:subnet_inicial_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/4-interfaz_eth0_DHCP.png}
+		\caption{Configuración de eth0 como interfaz del servidor DHCP en el archivo de configuración ISC-DHCP-SERVER}
+		\label{fig:interfaz_eth0_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/5-config_helpers.png}
+		\caption{Configuración de IP helper-address en el switch para redirigir solicitudes DHCP al servidor (10.4.245.100)}
+		\label{fig:config_helpers}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/6-Ataque_dhcp_starvation.png}
+		\caption{Ejecución del ataque DHCP Starvation usando Yersinia, enviando paquetes DISCOVER masivos para agotar el pool de direcciones}
+		\label{fig:ataque_dhcp_starvation}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/7-Tabla_MAC_post_dhcp.png}
+		\caption{Tabla MAC después del ataque DHCP Starvation, mostrando múltiples entradas dinámicas en la VLAN 18}
+		\label{fig:tabla_mac_post_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/8-Tabla_CountMAC_post_dhcp.png}
+		\caption{Conteo de direcciones MAC después del ataque: 7940 direcciones dinámicas en VLAN 18, confirmando el éxito del ataque}
+		\label{fig:tabla_countmac_post_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/9-Comando_limpiar_tabla.png}
+		\caption{Comando para limpiar la tabla de direcciones MAC dinámicas y restaurar el estado normal del switch}
+		\label{fig:comando_limpiar_tabla}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/10-Tabla_MAC_limpia_dhcp.png}
+		\caption{Tabla MAC después de la limpieza, mostrando solo las direcciones estáticas del sistema y algunas dinámicas legítimas}
+		\label{fig:tabla_mac_limpia_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/11-Tabla_CountMAC_limpia_dhcp.png}
+		\caption{Conteo de direcciones MAC después de la limpieza: solo 2 direcciones dinámicas en VLAN 18, estado normal restaurado}
+		\label{fig:tabla_countmac_limpia_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/12-cambio_configuracion_DHCP_server.png}
+		\caption{Modificación de la configuración DHCP para VLAN 18, cambiando el router por defecto a 10.4.18.11 (nuestro servidor)}
+		\label{fig:cambio_configuracion_dhcp_server}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/13-Comandos_forwading_DHCP.png}
+		\caption{Habilitación del IP forwarding y configuración de NAT masquerading para permitir el enrutamiento a través del servidor}
+		\label{fig:comandos_forwading_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/14-comprobacion_forwading_DHCP.png}
+		\caption{Verificación de que el IP forwarding está habilitado en el sistema (net.ipv4.ip\_forward = 1)}
+		\label{fig:comprobacion_forwading_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/15-iptables_servidor_DHCP.png}
+		\caption{Verificación de las reglas iptables NAT, mostrando la regla MASQUERADE para el tráfico saliente por eth0}
+		\label{fig:iptables_servidor_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/16-forwading-mim_DHCP.png}
+		\caption{Configuración alternativa del IP forwarding usando sysctl para habilitar el reenvío de paquetes}
+		\label{fig:forwading_mim_dhcp}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/17-Conexion_DHCP_servidor.png}
+		\caption{Captura de tráfico mostrando el proceso DHCP: paquete DISCOVER broadcast y posterior asignación de IP 10.4.18.52}
+		\label{fig:conexion_dhcp_servidor}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/18-DHCP_spoofing_servidot.png}
+		\caption{Tráfico de red mostrando el ataque Man-in-the-Middle: solicitudes ARP y tráfico ICMP siendo interceptado por el atacante}
+		\label{fig:dhcp_spoofing_servidor}
+		\end{figure}
+		
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/LAB7_DHCP/19-DHCP_Traceroute_servidor.png}
+		\caption{Traceroute y análisis de ruta mostrando el tráfico pasando a través del servidor atacante (10.4.10.11)}
+		\label{fig:dhcp_traceroute_servidor}
+		\end{figure}
+	
+	\subsection{Parte 2: Fortificación de Capa 2}
+	\label{sec:lab7:fortificacion}
+	
+\subsubsection{Port Security en AL-SW1}
+\label{sec:lab7:fort:portsecurity}
+
+\textbf{Objetivo:} Implementar medidas de seguridad en puertos de acceso para prevenir ataques de saturación de tabla CAM y conexiones no autorizadas.
+
+\textbf{Configuración aplicada:} Se configuró Port Security en el rango de puertos G0/2-10 del switch AL-SW1 con las siguientes características:
+\begin{itemize}
+	\item \textbf{Límite de direcciones MAC:} 15 direcciones por puerto
+	\item \textbf{Acción ante violación:} Shutdown automático del puerto
+	\item \textbf{Modo de aprendizaje:} Sticky MAC address (aprendizaje dinámico)
+	\item \textbf{Tiempo de aging:} 0 minutos (deshabilitado)
+\end{itemize}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.8\textwidth]{images/limitacion_MAC_AL.png}
+	\caption{Configuración de Port Security en AL-SW1 para los puertos G0/2-10}
+	\label{fig:port-security-config}
+\end{figure}
+
+\textbf{Comandos de verificación utilizados:}
+\begin{itemize}
+	\item \texttt{show port-security} - Estado general de Port Security
+	\item \texttt{show port-security address} - Tabla de direcciones MAC seguras
+	\item \texttt{show port-security interface g0/2} - Estado detallado por puerto
+\end{itemize}
+
+\textbf{Resultados de la verificación:}
+\begin{itemize}
+	\item Port Security habilitado correctamente en los puertos especificados
+	\item Modo de violación configurado como "Shutdown"
+	\item Límite máximo de 15 direcciones MAC por puerto establecido
+	\item Estado inicial: 0 direcciones MAC aprendidas (Secure-down)
+	\item Sistema preparado para detectar y responder a violaciones de seguridad
+\end{itemize}
+
+Esta configuración mitiga efectivamente los ataques de saturación de tabla CAM demostrados en la Parte 1, limitando el número de direcciones MAC que pueden ser aprendidas por cada puerto de acceso y proporcionando una respuesta automática ante intentos de violación.
+
+
+
+	\subsubsection{Desactivación de DTP en AL-SW1 y DL-SW1}
+	\label{sec:lab7:fort:dtp}	
+	
+	
+	Se deshabilitó DTP en todos los puertos de acceso y troncales, configurando manualmente el modo de cada puerto. Esto previene el establecimiento de enlaces troncales no autorizados.
+	
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/DPT_secure_AL.png}
+		\caption{ Desactivación de DTP en AL-SW1  }
+		\label{fig:fort_dtp_AL}
+	\end{figure}	
+	
+	
+	\subsubsection{Protección contra VLAN Hopping}
+	\label{sec:lab7:fort:vlanhopping}
+	
+	Se implementaron medidas contra VLAN hopping configurando una VLAN nativa diferente a las VLANs de usuario y eliminando la VLAN 1 de los enlaces troncales. Esto previene ataques de double tagging.
+	
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/VLAN_hopping_protection.png}
+		\caption{ Creación VLAN BLACK HOLE en interfaces }
+		\label{fig:fort_dtp_AL}
+	\end{figure}	
+	
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/VLAN_BLACKHOLE.png}
+		\caption{ VLAN BLACK HOLE }
+		\label{fig:fort_dtp_AL}
+	\end{figure}
+	
+	\subsubsection{Configuración STP Seguro en AL-SW1 y DL-SW1}
+	\label{sec:lab7:fort:stp}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/fortificacion_stp_AL.png}
+		\caption{Activa PortFast y BPDUGuard en AL-SW1 (para bloquear puertos que reciban BPDUs de un atacante}
+		\label{fig:fort_stp_al}
+	\end{figure}
+	
+		\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/conf STP DL.png}
+		\caption{Configuracion Root Bridge del DL-SW1 en las VLANs 16,17,18 y 745}
+		\label{fig:fort_stp_dl}
+	\end{figure}
+
+	
+	\subsubsection{DHCP Snooping en AL-SW1}
+	\label{sec:lab7:fort:dhcpsnooping}
+	
+	Se activó DHCP Snooping en las VLANs de usuario, configurando como trusted únicamente el puerto hacia DL-SW1. Se establecieron límites de tasa en puertos no trusted para prevenir ataques de agotamiento.
+	
+	\subsection{Parte 3: Dynamic ARP Inspection}
+	\label{sec:lab7:dai}
+	
+	Se implementó Dynamic ARP Inspection (DAI) en las VLANs de usuario, configurando como trusted el puerto troncal hacia DL-SW1. Se habilitó validación de direcciones MAC y IP en las respuestas ARP, y se establecieron límites de tasa.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/Ip_arp_inspection_0}
+		\caption{Verificación de IP ARP Inspection}
+		\label{fig:ip_arp_inspection}
+		
+	\end{figure}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.8\textwidth]{images/AL_arp_inspection}
+		\caption{Configuración de ARP Inspection en AL-SW1}
+		\label{fig:al_arp_inspection}
+	\end{figure}
+
+	
+
+	
+	\section{RUNNING-CONFIGS}
+	\label{sec:conclusiones}
+	
+	\subsection{Configuración del Switch de Acceso (AL-SW1)}
+	\label{sec:lab7:config:al-sw1}
+	
+	\begin{lstlisting}[language=bash, caption=Configuración del Switch AL-SW1, label=lst:al_sw1_config]
+		AL-SW1# show running-config
+		Building configuration...
+		
+		Current configuration : 6686 bytes
+		!
+		version 12.2
+		no service pad
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname AL-SW1
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		enable secret 5 $1$BXzr$DpibY1PXC9XHgP1QfCYHt1
+		enable password munics
+		!
+		username juniorAdmin secret 5 $1$0c//$Fu95Jt68hAoioL4pQKeSS.
+		username admin privilege 15 secret 5 $1$2w4w$M2w7r6O6jBR389QNWqlxc1
+		aaa new-model
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		aaa session-id common
+		system mtu routing 1500
+		ip arp inspection vlan 16-17,745
+		ip arp inspection validate src-mac dst-mac ip
+		!
+		ip dhcp snooping vlan 16-18
+		no ip dhcp snooping information option
+		ip dhcp snooping
+		no ip domain-lookup
+		ip domain-name munics.pri
+		!
+		crypto pki trustpoint TP-self-signed-3100061056
+		enrollment selfsigned
+		subject-name cn=IOS-Self-Signed-Certificate-3100061056
+		revocation-check none
+		rsakeypair TP-self-signed-3100061056
+		!
+		spanning-tree mode pvst
+		spanning-tree portfast bpduguard default
+		spanning-tree extend system-id
+		!
+		vlan internal allocation policy ascending
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		interface GigabitEthernet0/1
+		switchport access vlan 745
+		switchport mode access
+		switchport nonegotiate
+		ip arp inspection trust
+		!
+		interface GigabitEthernet0/2
+		switchport access vlan 16
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/3
+		switchport access vlan 16
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/4
+		switchport access vlan 16
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/5
+		switchport access vlan 17
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/6
+		switchport access vlan 17
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/7
+		switchport access vlan 17
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/8
+		switchport access vlan 18
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		ip arp inspection trust
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/9
+		switchport access vlan 18
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		ip arp inspection trust
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/10
+		switchport access vlan 18
+		switchport mode access
+		switchport nonegotiate
+		switchport port-security maximum 15
+		ip arp inspection trust
+		spanning-tree portfast
+		ip dhcp snooping limit rate 10
+		!
+		interface GigabitEthernet0/11
+		switchport access vlan 745
+		switchport mode dynamic desirable
+		!
+		interface GigabitEthernet0/12
+		switchport access vlan 745
+		switchport mode access
+		!
+		interface GigabitEthernet0/13
+		switchport access vlan 745
+		switchport mode access
+		!
+		interface GigabitEthernet0/14
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/15
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/16
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/17
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/18
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/19
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/20
+		switchport trunk allowed vlan 16-18,745
+		switchport mode trunk
+		switchport nonegotiate
+		ip arp inspection trust
+		ip dhcp snooping trust
+		!
+		interface GigabitEthernet0/21
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/22
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/23
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface GigabitEthernet0/24
+		switchport access vlan 23
+		switchport mode access
+		shutdown
+		!
+		interface Vlan1
+		no ip address
+		shutdown
+		!
+		interface Vlan745
+		ip address 10.4.245.1 255.255.255.0
+		!
+		ip http server
+		ip http secure-server
+		logging esm config
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any log
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813
+		radius-server key Bayern_2025
+		!
+		line con 0
+		password munics
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		end
+	\end{lstlisting}
+	
+	\subsection{Configuración del Switch de Distribución (DL-SW1)}
+	\label{sec:lab7:config:dl-sw1}
+	
+	\begin{lstlisting}[language=bash, caption=Configuración del Switch DL-SW1, label=lst:dl_sw1_config]
+		DL-SW1# show running-config
+		Building configuration...
+		
+		Current configuration : 3648 bytes
+		!
+		version 12.2
+		no service pad
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname DL-SW1
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		enable secret 5 $1$h4mP$R/iJAmdAFuSOG0hT31MoL/
+		enable password munics
+		!
+		username juniorAdmin secret 5 $1$Kv2T$zH/V14q21ulpWg.CkcYOX.
+		username admin privilege 15 secret 5 $1$/Bku$u1UXOu1a5D3u8XSooyC0P1
+		!
+		aaa new-model
+		aaa group server radius RADIUS-GROUP
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		aaa session-id common
+		system mtu routing 1500
+		ip routing
+		no ip domain-lookup
+		ip domain-name munics.pri
+		!
+		crypto pki trustpoint TP-self-signed-3123997184
+		enrollment selfsigned
+		subject-name cn=IOS-Self-Signed-Certificate-3123997184
+		revocation-check none
+		rsakeypair TP-self-signed-3123997184
+		!
+		spanning-tree mode pvst
+		spanning-tree extend system-id
+		spanning-tree vlan 16-18,745 priority 24576
+		!
+		vlan internal allocation policy ascending
+		!
+		ip ssh time-out 60
+		ip ssh authentication-retries 2
+		ip ssh version 2
+		!
+		interface FastEthernet0/1
+		switchport mode access
+		switchport port-security maximum 10
+		switchport port-security
+		switchport port-security mac-address sticky
+		!
+		interface FastEthernet0/2
+		!
+		interface FastEthernet0/3
+		!
+		interface FastEthernet0/4
+		!
+		interface FastEthernet0/5
+		!
+		interface FastEthernet0/6
+		!
+		interface FastEthernet0/7
+		!
+		interface FastEthernet0/8
+		!
+		interface FastEthernet0/9
+		!
+		interface FastEthernet0/10
+		!
+		interface FastEthernet0/11
+		!
+		interface FastEthernet0/12
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 16-18,745
+		switchport mode trunk
+		!
+		interface FastEthernet0/13
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 2,745,746
+		switchport mode trunk
+		!
+		interface FastEthernet0/14
+		switchport access vlan 3
+		switchport mode access
+		!
+		interface FastEthernet0/15
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 3,745
+		switchport mode trunk
+		!
+		interface FastEthernet0/16
+		switchport access vlan 4
+		switchport mode access
+		!
+		interface FastEthernet0/17
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 4,745
+		switchport mode trunk
+		!
+		interface FastEthernet0/18
+		!
+		interface FastEthernet0/19
+		!
+		interface FastEthernet0/20
+		!
+		interface FastEthernet0/21
+		!
+		interface FastEthernet0/22
+		!
+		interface FastEthernet0/23
+		!
+		interface FastEthernet0/24
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 745,746
+		switchport mode trunk
+		!
+		interface GigabitEthernet0/1
+		!
+		interface GigabitEthernet0/2
+		!
+		interface Vlan1
+		no ip address
+		!
+		interface Vlan2
+		ip address 10.4.0.1 255.255.255.252
+		!
+		interface Vlan16
+		ip address 10.4.16.1 255.255.255.0
+		ip helper-address 10.4.245.100
+		!
+		interface Vlan17
+		ip address 10.4.17.1 255.255.255.0
+		ip helper-address 10.4.245.100
+		!
+		interface Vlan18
+		ip address 10.4.18.1 255.255.255.0
+		ip helper-address 10.4.245.100
+		!
+		interface Vlan745
+		ip address 10.4.245.2 255.255.255.0
+		!
+		router ospf 10
+		router-id 2.2.2.2
+		log-adjacency-changes
+		passive-interface default
+		no passive-interface Vlan2
+		network 10.4.0.0 0.0.255.255 area 0
+		!
+		ip classless
+		ip http server
+		ip http secure-server
+		!
+		ip sla enable reaction-alerts
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		!
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813 key Bayern_2025
+		!
+		line con 0
+		password munics
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		end
+	\end{lstlisting}
+	
+	\subsection{Configuración del Firewall (fw)}
+	\label{sec:lab7:config:fw}
+	
+	\begin{lstlisting}[language=bash, caption=Configuración del Firewall, label=lst:fw_config]
+		fw# show running-config
+		Building configuration...
+		
+		Current configuration : 2370 bytes
+		!
+		version 15.4
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname fw
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		enable secret 5 $1$a48E$tDRpNmlo4YFCSk5yjDWan.
+		enable password munics
+		!
+		aaa new-model
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		aaa session-id common
+		memory-size iomem 15
+		!
+		no ip domain lookup
+		ip domain name munics.pri
+		ip cef
+		no ipv6 cef
+		!
+		multilink bundle-name authenticated
+		!
+		license udi pid CISCO1941/K9 sn FCZ161592Q9
+		!
+		username juniorAdmin secret 5 $1$Hhd7$wqazFV5ZhbaQ1ima.Yj5l/
+		username admin privilege 15 secret 5 $1$j23q$dXaSI0x7EL24ZPTqWYIT7/
+		!
+		redundancy
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		interface Embedded-Service-Engine0/0
+		no ip address
+		shutdown
+		!
+		interface GigabitEthernet0/0
+		no ip address
+		duplex auto
+		speed auto
+		!
+		interface GigabitEthernet0/0.2
+		encapsulation dot1Q 2
+		ip address 10.4.0.2 255.255.255.252
+		!
+		interface GigabitEthernet0/0.745
+		encapsulation dot1Q 745
+		ip address 10.4.245.3 255.255.255.0
+		!
+		interface GigabitEthernet0/0.746
+		encapsulation dot1Q 746
+		ip address 10.4.246.1 255.255.255.0
+		!
+		interface GigabitEthernet0/1
+		ip address 10.4.0.5 255.255.255.252
+		duplex auto
+		speed auto
+		!
+		router ospf 10
+		router-id 3.3.3.3
+		passive-interface default
+		no passive-interface GigabitEthernet0/0.2
+		no passive-interface GigabitEthernet0/1
+		network 10.4.0.0 0.0.255.255 area 0
+		!
+		ip forward-protocol nd
+		no ip http server
+		no ip http secure-server
+		!
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813 key Bayern_2025
+		!
+		line con 0
+		password munics
+		line aux 0
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		scheduler allocate 20000 1000
+		!
+		end
+	\end{lstlisting}
+	
+	\subsection{Configuración del Router CPE}
+	\label{sec:lab7:config:cpe}
+	
+	\begin{lstlisting}[language=bash, caption=Configuración del Router CPE, label=lst:cpe_config]
+		CPE# show running-config
+		Building configuration...
+		
+		Current configuration : 2403 bytes
+		!
+		version 15.4
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname CPE
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		enable secret 5 $1$GdZU$wjEfpZdqvFc/slyD.nmT4.
+		enable password munics
+		!
+		aaa new-model
+		aaa authentication login default group radius local enable
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		aaa session-id common
+		memory-size iomem 15
+		!
+		no ip domain lookup
+		ip domain name munics.pri
+		ip cef
+		no ipv6 cef
+		!
+		multilink bundle-name authenticated
+		!
+		license udi pid CISCO1941/K9 sn FCZ1520C07N
+		!
+		username juniorAdmin secret 5 $1$kRPU$yy5tuKlqErLUXYYvtwjOZ.
+		username admin privilege 15 secret 5 $1$vHGy$Bg1OGfhpYB6RjnZFvWVgC1
+		!
+		redundancy
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		interface Embedded-Service-Engine0/0
+		no ip address
+		shutdown
+		!
+		interface GigabitEthernet0/0
+		no ip address
+		duplex auto
+		speed auto
+		!
+		interface GigabitEthernet0/0.3
+		encapsulation dot1Q 3
+		ip address 10.4.0.6 255.255.255.252
+		!
+		interface GigabitEthernet0/0.745
+		encapsulation dot1Q 745
+		ip address 10.4.245.4 255.255.255.0
+		!
+		interface GigabitEthernet0/1
+		ip address 192.0.4.1 255.255.255.0
+		duplex auto
+		speed auto
+		!
+		router ospf 10
+		router-id 4.4.4.4
+		passive-interface default
+		no passive-interface GigabitEthernet0/0.3
+		network 10.4.0.0 0.0.255.255 area 0
+		!
+		ip forward-protocol nd
+		no ip http server
+		no ip http secure-server
+		!
+		ip route 0.0.0.0 0.0.0.0 192.0.4.2
+		!
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813
+		radius-server key Bayern_2025
+		!
+		line con 0
+		password munics
+		line aux 0
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication ssh-login
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication ssh-login
+		transport input ssh
+		!
+		scheduler allocate 20000 1000
+		!
+		end
+	\end{lstlisting}
+	
+	\subsection{Configuración del Router ISP}
+	\label{sec:lab7:config:isp}
+	
+	\begin{lstlisting}[language=bash, caption=Configuración del Router ISP, label=lst:isp_config]
+		ISP# show running-config
+		Building configuration...
+		
+		Current configuration : 2225 bytes
+		!
+		version 15.4
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname ISP
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		enable secret 5 $1$Y1Sr$TxKfVgh6.IjLVIx9YtRSN/
+		enable password munics
+		!
+		aaa new-model
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		aaa session-id common
+		memory-size iomem 15
+		!
+		no ip domain lookup
+		ip domain name acme.pri
+		ip cef
+		no ipv6 cef
+		!
+		multilink bundle-name authenticated
+		!
+		license udi pid CISCO1941/K9 sn FCZ151592DL
+		!
+		username juniorAdmin secret 5 $1$iz50$zTkxSpdIv3CtwygyBrqWj0
+		username admin privilege 15 secret 5 $1$XEbC$I3tqFuyyCK.WqIu1Fx1mf1
+		!
+		redundancy
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		interface Embedded-Service-Engine0/0
+		no ip address
+		shutdown
+		!
+		interface GigabitEthernet0/0
+		no ip address
+		duplex auto
+		speed auto
+		!
+		interface GigabitEthernet0/0.4
+		encapsulation dot1Q 4
+		ip address 192.0.4.2 255.255.255.0
+		!
+		interface GigabitEthernet0/0.745
+		description VLAN-Pod4-adm
+		encapsulation dot1Q 745
+		ip address 10.4.245.5 255.255.255.0
+		!
+		interface GigabitEthernet0/1
+		ip address 192.0.0.4 255.255.255.0
+		duplex auto
+		speed auto
+		!
+		ip forward-protocol nd
+		no ip http server
+		no ip http secure-server
+		!
+		ip route 10.4.0.0 255.255.0.0 192.0.4.1
+		!
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813 key Bayern_2025
+		!
+		line con 0
+		password munics
+		line aux 0
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		scheduler allocate 20000 1000
+		!
+		end
+	\end{lstlisting}
+
+
+		
+\end{document}

@@ -1,0 +1,32 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Introducción}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}About}{1}{subsection.1.1}%
+\contentsline {section}{\numberline {2}Laboratorio 6: Despliegue de mecanismos de control de acceso a la gestión de los dispositivos de red}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Objetivos}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Configuración del servidor Radius}{2}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Configuración de acceso al servidor Radius en los dispositivos}{3}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}Switch de Distribución DL-SW1}{6}{subsubsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.4}Configuración para Routers}{7}{subsection.2.4}%
+\contentsline {subsubsection}{\numberline {2.4.1}Firewall (FW)}{7}{subsubsection.2.4.1}%
+\contentsline {subsubsection}{\numberline {2.4.2}ISP Router}{7}{subsubsection.2.4.2}%
+\contentsline {subsubsection}{\numberline {2.4.3}CPE Router}{7}{subsubsection.2.4.3}%
+\contentsline {section}{\numberline {3}Laboratorio 7: Fortificación en la capa de acceso en redes Ethernet}{8}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Parte 1: Evaluación de Vulnerabilidades}{8}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}Saturación de Tabla CAM}{8}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}Explotación de Protocolos Capa 2 con Yersinia}{10}{subsubsection.3.1.2}%
+\contentsline {subsubsection}{\numberline {3.1.3}Ataques ARP - Man in the Middle}{13}{subsubsection.3.1.3}%
+\contentsline {subsubsection}{\numberline {3.1.4}Ataque DHCP}{14}{subsubsection.3.1.4}%
+\contentsline {subsection}{\numberline {3.2}Parte 2: Fortificación de Capa 2}{22}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Port Security en AL-SW1}{22}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Desactivación de DTP en AL-SW1 y DL-SW1}{24}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Protección contra VLAN Hopping}{24}{subsubsection.3.2.3}%
+\contentsline {subsubsection}{\numberline {3.2.4}Configuración STP Seguro en AL-SW1 y DL-SW1}{26}{subsubsection.3.2.4}%
+\contentsline {subsubsection}{\numberline {3.2.5}DHCP Snooping en AL-SW1}{26}{subsubsection.3.2.5}%
+\contentsline {subsection}{\numberline {3.3}Parte 3: Dynamic ARP Inspection}{27}{subsection.3.3}%
+\contentsline {section}{\numberline {4}RUNNING-CONFIGS}{27}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Configuración del Switch de Acceso (AL-SW1)}{27}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Configuración del Switch de Distribución (DL-SW1)}{32}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Configuración del Firewall (fw)}{35}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Configuración del Router CPE}{37}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Configuración del Router ISP}{40}{subsection.4.5}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

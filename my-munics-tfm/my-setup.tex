@@ -1,0 +1,80 @@
+% !TEX root = my-thesis.tex
+
+
+% **************************************************
+% Files' Character Encoding
+% **************************************************
+%% Not necessary with luaLaTeX
+% 
+% \PassOptionsToPackage{utf8}{inputenc}
+% \usepackage{inputenc}
+
+
+% **************************************************
+% Information and Commands for Reuse
+% **************************************************
+\newcommand{\thesisTitle}{Titulo}
+\newcommand{\thesisName}{Subtitulo}
+\newcommand{\thesisSubject}{Redes Seguras}
+\newcommand{\thesisDate}{Curso 2022/2023}
+
+\newcommand{\thesisFirstSupervisor}{}
+\newcommand{\thesisSecondSupervisor}{}
+
+\newcommand{\thesisUniversityStudies}{\protect{Máster Inter-Universitario en Ciberseguridade}}
+\newcommand{\thesisUniversity}{Universidade da Coruña}     % Replace with your university
+\newcommand{\thesisUniversitySchool}{Facultade de Informática} % Replace with your school
+\newcommand{\thesisUniversityCity}{A Coruña}  % Replace with your city
+\newcommand{\thesisUniversityStreetAddress}{Campus de Elviña s/n}
+\newcommand{\thesisUniversityPostalCode}{15071}
+
+% Poner los nombres de los alumnos en la portada, en el archivo content/titlepages.tex %
+
+% **************************************************
+% Debug LaTeX Information
+% **************************************************
+%\listfiles
+
+
+% **************************************************
+% Load and Configure Packages
+% **************************************************
+%\usepackage[spanish]{babel} % babel system, adjust the language of the content
+\RequirePackage{polyglossia}
+\setdefaultlanguage{spanish}
+\setotherlanguage{english}
+
+\PassOptionsToPackage{% setup clean thesis style
+    figuresep=colon,%
+    hangfigurecaption=false,%
+    hangsection=true,%
+    hangsubsection=true,%
+    sansserif=false,%
+    configurelistings=true,%
+    colorize=full,%
+    colortheme=bluemagenta,%
+    configurebiblatex=true,%
+    bibsys=biber,%
+    bibfile=bib-refs,%
+    bibstyle=alphabetic,%
+    bibsorting=nty,%
+}{munics}
+\usepackage{munics}
+
+\hypersetup{% setup the hyperref-package options
+    pdftitle={\thesisTitle},    %   - title (PDF meta)
+    pdfsubject={\thesisSubject},%   - subject (PDF meta)
+    %pdfauthor={\thesisName},    %   - author (PDF meta)
+    plainpages=false,           %   -
+    colorlinks=false,           %   - colorize links?
+    pdfborder={0 0 0},          %   -
+    breaklinks=true,            %   - allow line break inside links
+    bookmarksnumbered=true,     %
+    bookmarksopen=true          %
+}
+
+% **************************************************
+% Other Packages
+% **************************************************
+\usepackage{scrhack}
+\usepackage{float}
