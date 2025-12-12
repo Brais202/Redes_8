@@ -361,17 +361,27 @@
 	\subsubsection{PAT dinámico para tráfico saliente}
 	\label{sec:lab8:pat}
 
-	Para implementar este comportamiento, el primer paso fue crear un pool de direcciones para cada VLAN. Estos pools permiten que se asignen direcciones dentro de un rango determinado para cada una de las VLANs. Se muestran en la imagen  TALTAL junto con las ACL necesarias para identificar el tráfico origen de cada red. \\
+	Para implementar este comportamiento, el primer paso fue crear un pool de direcciones para cada VLAN. Estos pools permiten que se asignen direcciones dentro de un rango determinado para cada una de las VLANs. Se muestran en la Figura \ref{fig:config_pat1} junto con las ACL necesarias para identificar el tráfico origen de cada red.
 	
-	%%%añadir imagen
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathNat config_PAT.png}
+		\caption{Creación de pools y ACLs asociadas a cada VLAN.}
+		\label{fig:config_pat1}
+	\end{figure}
 	
+
 	Las ACL generadas permiten clasificar el tráfico según la VLAN de origen, mientras que los pools determinan qué dirección pública se asignará a cada una de ellas. \\
 	
 	El siguiente paso consistió en asociar cada ACL con su pool correspondiente y activar PAT mediante la opción
-	\texttt{overload}. La figura TALTAL muestra este proceso: \\
+	\texttt{overload}. La Figura  \ref{fig:config_pat2} muestra este proceso.
 	
-	%%añadir imagen
-	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathNat config_PAT_2.png}
+		\caption{Asociación de ACLs y pools, habilitando NAT overload para cada VLAN.}
+		\label{fig:config_pat2}
+	\end{figure}
 	
 	A continuación, en la imagen \ref{fig:nat_interfaces} se configuran las interfaces como inside y outside. La interfaz GigabitEthernet0/0.3 se configura como \texttt{inside}, mientras que la interfaz GigabitEthernet0/1 se configura como \texttt{outside}.
 	
