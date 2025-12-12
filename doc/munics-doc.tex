@@ -221,29 +221,189 @@
 	\subsubsection{Filtrado Estático de Paquetes}
 	\label{sec:lab8:filtrado-estatico}
 	
-	Descripción de la ACL estándar implementada para bloquear direcciones IP no válidas o peligrosas:
+	En el router CPE se implementó una ACL estándar (ACL 10) en la interfaz externa (GigabitEthernet0/1) para filtrar paquetes con direcciones IP de origen no válidas o peligrosas. Esta ACL se aplica en dirección de entrada para proteger la red interna de ataques comunes como IP spoofing.
+	
 	\begin{itemize}
-		\item Direcciones privadas.
-		\item Direcciones de enlace local.
-		\item Direcciones multicast y broadcast.
-		\item Loopback (127.0.0.0/8).
-		\item Otras direcciones consideradas peligrosas (justificar).
+		\item \textbf{Direcciones privadas:} Se bloquean todos los rangos RFC 1918:
+		\begin{itemize}
+			\item 10.0.0.0/8
+			\item 172.16.0.0/12
+			\item 192.168.0.0/16
+		\end{itemize}
+		
+		\item \textbf{Direcciones de enlace local:} Se bloquea el rango 169.254.0.0/16
+		
+		\item \textbf{Direcciones multicast:} Se bloquea el rango 224.0.0.0/4
+		
+		\item \textbf{Direcciones de broadcast:} Se bloquea la dirección 255.255.255.255
+		
+		\item \textbf{Loopback:} Se bloquea el rango 127.0.0.0/8
+		
+		\item \textbf{Otras direcciones peligrosas:}
+		\begin{itemize}
+			\item Dirección cero (0.0.0.0/8) - usada en ataques de redirección
+			\item Rango 100.64.0.0/10 - direcciones de CGN (Carrier-Grade NAT)
+			\item 192.88.99.0/24 - anycast IPv6 to IPv4
+			\item 198.18.0.0/15 - pruebas de benchmark
+			\item 198.51.100.0/24 - documentación (TEST-NET-2)
+			\item 203.0.113.0/24 - documentación (TEST-NET-3)
+			\item Rango 240.0.0.0/4 - direcciones reservadas/futuras
+		\end{itemize}
 	\end{itemize}
 	
-	Incluir aquí la configuración de la ACL estándar en el firewall.
+	La ACL 10 está diseñada siguiendo las mejores prácticas de seguridad (BCP 38/RFC 2827) para prevenir IP spoofing. Se aplica en la interfaz externa con la política de "deny-by-default", permitiendo solo tráfico legítimo al final de la lista.
+	
+	\begin{lstlisting}[language=bash, caption=ACL 10 - Filtrado estático en CPE, label=lst:acl10-cpe]
+		! ACL aplicada en GigabitEthernet0/1 (interfaz externa)
+		interface GigabitEthernet0/1
+		ip access-group 10 in  ! Filtrado en dirección de entrada
+		
+		! ACL estándar 10 - Filtrado anti-spoofing
+		access-list 10 deny   255.255.255.255      ! Dirección de broadcast
+		access-list 10 deny   0.0.0.0 0.255.255.255 ! Dirección cero
+		access-list 10 deny   10.0.0.0 0.255.255.255 ! Direcciones privadas clase A
+		access-list 10 deny   100.64.0.0 0.63.255.255 ! CGN (RFC 6598)
+		access-list 10 deny   127.0.0.0 0.255.255.255 ! Loopback
+		access-list 10 deny   169.254.0.0 0.0.255.255 ! Link-local (APIPA)
+		access-list 10 deny   172.16.0.0 0.15.255.255 ! Direcciones privadas clase B
+		access-list 10 deny   192.88.99.0 0.0.0.255   ! Anycast 6to4
+		access-list 10 deny   192.168.0.0 0.0.255.255 ! Direcciones privadas clase C
+		access-list 10 deny   198.18.0.0 0.1.255.255  ! Benchmark testing
+		access-list 10 deny   198.51.100.0 0.0.0.255  ! TEST-NET-2
+		access-list 10 deny   203.0.113.0 0.0.0.255   ! TEST-NET-3
+		access-list 10 deny   224.0.0.0 15.255.255.255 ! Multicast (224.0.0.0/4)
+		access-list 10 deny   240.0.0.0 15.255.255.255 ! Reservado/Futuro (240.0.0.0/4)
+		access-list 10 permit any                     ! Permitir tráfico legítimo
+	\end{lstlisting}
 	
 	\subsubsection{Configuración de CBAC en FW}
 	\label{sec:lab8:cbac}
 	
-	Implementación de la política de seguridad definida en la Tabla 1 mediante CBAC. Consideraciones:
-	\begin{itemize}
-		\item Tráfico bidireccional.
-		\item Protocolos de enrutamiento (OSPF, etc.).
-		\item Plano de gestión (SSH desde VLAN de administración).
-		\item Acceso desde equipos de salto.
-	\end{itemize}
+	La implementación de la política de seguridad definida en la  tabla del enuncaido se realizó mediante Context-Based Access Control (CBAC) en el firewall perimetral.
 	
-	Incluir configuración de las ACLs extendidas y comandos CBAC aplicados.
+	
+	
+	\paragraph{Configuración de CBAC:}
+	Se creó una inspección CBAC llamada "CBAC-FW" que examina los protocolos TCP, UDP, ICMP, HTTP, HTTPS y SSH para mantener el estado de las conexiones.
+	
+	\begin{lstlisting}[language=bash, caption=Configuración CBAC en el firewall, label=lst:cbac-config]
+		! Definición de la inspección CBAC
+		ip inspect name CBAC-FW tcp    ! Inspección de conexiones TCP
+		ip inspect name CBAC-FW udp    ! Inspección de sesiones UDP
+		ip inspect name CBAC-FW icmp   ! Inspección de paquetes ICMP
+		ip inspect name CBAC-FW http   ! Inspección específica para HTTP
+		ip inspect name CBAC-FW https  ! Inspección específica para HTTPS
+		ip inspect name CBAC-FW ssh    ! Inspección específica para SSH
+		
+		! Aplicación de CBAC en las interfaces
+		interface GigabitEthernet0/0.2    ! Hacia red interna
+		ip inspect CBAC-FW in
+		
+		interface GigabitEthernet0/0.746  ! Hacia DMZ (servidores)
+		ip inspect CBAC-FW in
+		
+		interface GigabitEthernet0/1      ! Hacia Internet
+		ip inspect CBAC-FW in
+	\end{lstlisting}
+	
+	\paragraph{ACLs Extendidas para Política de Seguridad:}
+	Se implementaron tres ACLs extendidas principales:
+	
+	\begin{enumerate}
+		\item \textbf{FW\_INTERNET\_IN:} Controla el tráfico entrante desde Internet
+		\item \textbf{lista\_CBAC:} Controla el tráfico entre redes internas y hacia Internet
+		\item \textbf{lista\_dmz:} Controla el tráfico desde la DMZ hacia Internet
+	\end{enumerate}
+	
+	\begin{lstlisting}[language=bash, caption=ACL extendida lista\_CBAC (política principal), label=lst:lista-cbac]
+		ip access-list extended lista_CBAC
+		! VLANs -> Servicios (DNS, HTTP, HTTPS, ICMP)
+		permit udp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain  ! VLAN16 a DNS
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www      ! VLAN16 a HTTP
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443      ! VLAN16 a HTTPS
+		permit icmp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255           ! VLAN16 ICMP
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain  ! VLAN16 a DNS/TCP
+		
+		! VLANs -> Internet (HTTP, HTTPS, DNS, ICMP)
+		permit tcp 10.4.16.0 0.0.0.255 any eq www    ! VLAN16 HTTP saliente
+		permit tcp 10.4.16.0 0.0.0.255 any eq 443    ! VLAN16 HTTPS saliente
+		permit udp 10.4.16.0 0.0.0.255 any eq domain ! VLAN16 DNS saliente
+		permit icmp 10.4.16.0 0.0.0.255 any          ! VLAN16 ICMP saliente
+		
+		! Se repiten reglas similares para VLAN17 y VLAN18...
+		
+		! ADMIN -> SSH anywhere
+		permit tcp 10.4.245.0 0.0.0.255 any eq 22    ! SSH desde administración
+		
+		! Permitir OSPF para enrutamiento
+		permit ospf host 10.4.0.1 host 224.0.0.5     ! OSPF multicast
+		permit ospf host 10.4.0.1 host 10.4.0.2      ! OSPF unicast
+		permit ospf host 10.4.0.2 host 224.0.0.5
+		permit ospf host 10.4.0.2 host 10.4.0.1
+		
+		! Reglas de retorno para sesiones establecidas (CBAC)
+		permit tcp any any established                ! Conexiones TCP establecidas
+		permit udp any any eq domain                  ! Respuestas DNS
+		permit icmp any any echo-reply                ! Respuestas ping
+		permit icmp any any time-exceeded             ! TTL exceeded
+		permit icmp any any unreachable               ! Destino inalcanzable
+		permit icmp any any echo                      ! Pings salientes
+		
+		! Denegar todo lo demás con logging
+		deny ip any any log
+	\end{lstlisting}
+	
+	\paragraph{ACL para Tráfico desde Internet:}
+	\begin{lstlisting}[language=bash, caption=ACL FW\_INTERNET\_IN, label=lst:fw-internet-in]
+		ip access-list extended FW_INTERNET_IN
+		! Internet a Servicios (HTTPS específico + ICMP)
+		permit icmp any 10.4.246.0 0.0.0.255        ! Ping a servidores
+		permit tcp any host 10.4.246.38 eq 443      ! HTTPS a servidor específico
+		
+		! Permitir OSPF para enrutamiento
+		permit ospf host 10.4.0.5 host 224.0.0.5    ! OSPF con CPE
+		permit ospf host 10.4.0.5 host 10.4.0.6
+		permit ospf host 10.4.0.6 host 224.0.0.5
+		permit ospf host 10.4.0.6 host 10.4.0.5
+		
+		! Denegar todo lo demás con logging
+		deny ip any any log
+	\end{lstlisting}
+	
+	\paragraph{ACL para la DMZ:}
+	\begin{lstlisting}[language=bash, caption=ACL lista\_dmz, label=lst:lista-dmz]
+		ip access-list extended lista_dmz
+		! Servicios hacia Internet (respuestas)
+		permit tcp 10.4.246.0 0.0.0.255 eq www any   ! HTTP desde servidores
+		permit tcp 10.4.246.0 0.0.0.255 eq 443 any   ! HTTPS desde servidores
+		permit udp 10.4.246.0 0.0.0.255 eq domain any ! DNS desde servidores
+		permit icmp 10.4.246.0 0.0.0.255 any         ! ICMP desde servidores
+		
+		! Respuestas a pings entrantes
+		permit icmp any 10.4.246.0 0.0.0.255 echo-reply
+		
+		! Conexiones establecidas
+		permit tcp any any established
+		
+		! Denegar todo lo demás
+		deny ip any any log
+	\end{lstlisting}
+	
+	\paragraph{Aplicación de las ACLs:}
+	Las ACLs se aplicaron en las interfaces correspondientes para implementar la política de seguridad:
+	
+	\begin{lstlisting}[language=bash, caption=Aplicación de ACLs en interfaces, label=lst:aplicacion-acls]
+		interface GigabitEthernet0/0.2    ! Hacia red interna (DL-SW1)
+		ip access-group lista_CBAC in    ! Filtrado de entrada
+		
+		interface GigabitEthernet0/0.746  ! Hacia DMZ (servidores)
+		ip access-group lista_dmz in     ! Filtrado de entrada
+		
+		interface GigabitEthernet0/1      ! Hacia Internet (CPE)
+		ip access-group FW_INTERNET_IN in ! Filtrado de entrada desde Internet
+	\end{lstlisting}
+	
+	Esta configuración implementa completamente la política de seguridad definida en la Tabla 1, permitiendo el tráfico autorizado entre zonas mientras bloquea todo el tráfico no permitido explícitamente. El uso de CBAC garantiza que las conexiones establecidas legítimamente puedan recibir tráfico de retorno sin necesidad de reglas explícitas para cada flujo bidireccional.
 	
 	\subsubsection{Configuración de Zone-Based Firewall en FW}
 	\label{sec:lab8:zbfw}
@@ -255,6 +415,99 @@
 		\item Comparación CBAC vs ZBFW (ventajas/desventajas en esta topología).
 	\end{itemize}
 	
+	\paragraph{ACLs para Políticas de Zona:}
+	Se implementaron cinco ACLs extendidas para definir el tráfico permitido entre zonas:
+	
+	\subparagraph{ACL para tráfico desde INSIDE hacia OUTSIDE:}
+	Permite a las VLANs de usuarios acceder a servicios de Internet.
+	
+	\begin{lstlisting}[language=bash, caption=ACL-INSIDE-TO-OUTSIDE, label=lst:acl-inside-outside]
+		ip access-list extended ACL-INSIDE-TO-OUTSIDE
+		remark VLAN16 -> Internet
+		permit tcp 10.4.16.0 0.0.0.255 any eq www
+		permit tcp 10.4.16.0 0.0.0.255 any eq 443
+		permit udp 10.4.16.0 0.0.0.255 any eq domain
+		permit tcp 10.4.16.0 0.0.0.255 any eq domain
+		permit icmp 10.4.16.0 0.0.0.255 any
+		remark VLAN17 -> Internet
+		permit tcp 10.4.17.0 0.0.0.255 any eq www
+		permit tcp 10.4.17.0 0.0.0.255 any eq 443
+		permit udp 10.4.17.0 0.0.0.255 any eq domain
+		permit tcp 10.4.17.0 0.0.0.255 any eq domain
+		permit icmp 10.4.17.0 0.0.0.255 any
+		remark VLAN18 -> Internet
+		permit tcp 10.4.18.0 0.0.0.255 any eq www
+		permit tcp 10.4.18.0 0.0.0.255 any eq 443
+		permit udp 10.4.18.0 0.0.0.255 any eq domain
+		permit tcp 10.4.18.0 0.0.0.255 any eq domain
+		permit icmp 10.4.18.0 0.0.0.255 any
+	\end{lstlisting}
+	
+	\subparagraph{ACL para tráfico desde INSIDE hacia DMZ:}
+	Permite a las VLANs de usuarios acceder a los servidores internos.
+	
+	\begin{lstlisting}[language=bash, caption=ACL-INSIDE-TO-DMZ, label=lst:acl-inside-dmz]
+		ip access-list extended ACL-INSIDE-TO-DMZ
+		remark VLAN16 -> DMZ (Servicios)
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit udp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit icmp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255
+		remark VLAN17 -> DMZ (Servicios)
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit udp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit icmp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255
+		remark VLAN18 -> DMZ (Servicios)
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit udp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit icmp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255
+		remark VLAN16 -> DMZ (HTTP/HTTPS/DNS/ICMP)
+		remark VLAN17 -> DMZ
+		remark VLAN18 -> DMZ
+	\end{lstlisting}
+	
+	\subparagraph{ACL para tráfico desde OUTSIDE hacia DMZ:}
+	Permite acceso controlado desde Internet a servicios específicos en la DMZ.
+	
+	\begin{lstlisting}[language=bash, caption=ACL-OUTSIDE-TO-DMZ, label=lst:acl-outside-dmz]
+		ip access-list extended ACL-OUTSIDE-TO-DMZ
+		remark Internet -> Servidor HTTPS en DMZ + Ping
+		permit icmp any host 10.4.246.38
+		permit tcp any host 10.4.246.38 eq 443
+	\end{lstlisting}
+	
+	\subparagraph{ACL para tráfico desde DMZ hacia OUTSIDE:}
+	Permite a los servidores responder a solicitudes y acceder a Internet para actualizaciones.
+	
+	\begin{lstlisting}[language=bash, caption=ACL-DMZ-TO-OUTSIDE, label=lst:acl-dmz-outside]
+		ip access-list extended ACL-DMZ-TO-OUTSIDE
+		remark DMZ -> Internet (HTTP/HTTPS/DNS/ICMP)
+		permit tcp 10.4.246.0 0.0.0.255 any eq www
+		permit tcp 10.4.246.0 0.0.0.255 any eq 443
+		permit udp 10.4.246.0 0.0.0.255 any eq domain
+		permit icmp 10.4.246.0 0.0.0.255 any
+	\end{lstlisting}
+	
+	\subparagraph{ACL para protocolos de enrutamiento OSPF:}
+	Permite el tráfico OSPF necesario para mantener la convergencia de la red.
+	
+	\begin{lstlisting}[language=bash, caption=ACL-OSPF, label=lst:acl-ospf]
+		ip access-list extended ACL-OSPF
+		remark OSPF entre todos los routers
+		permit ospf host 10.4.0.1 host 224.0.0.5
+		permit ospf host 10.4.0.1 host 10.4.0.2
+		permit ospf host 10.4.0.2 host 224.0.0.5
+		permit ospf host 10.4.0.2 host 10.4.0.1
+		permit ospf host 10.4.0.5 host 224.0.0.5
+		permit ospf host 10.4.0.5 host 10.4.0.6
+		permit ospf host 10.4.0.6 host 224.0.0.5
+		permit ospf host 10.4.0.6 host 10.4.0.5
+	\end{lstlisting}
 	
 	\begin{figure}[H]
 		\centering
@@ -343,12 +596,106 @@
 	\subsubsection{Filtrado en DL-SW1}
 	\label{sec:lab8:filtrado-switch}
 	
-	Configuración de control de tráfico entre VLANs en el switch de distribución:
+	En el switch de distribución DL-SW1 se implementó filtrado de capa 3 mediante ACLs extendidas aplicadas directamente en las interfaces SVI (Switched Virtual Interfaces) de cada VLAN. Este enfoque proporciona control granular del tráfico inter-VLAN a nivel de la capa de distribución, complementando la seguridad perimetral implementada en el firewall.
+	
+	
+	\paragraph{Justificación de la Opción Elegida:}
+	Se seleccionaron \textbf{ACLs extendidas aplicadas en interfaces SVI} por las siguientes razones:
 	\begin{itemize}
-		\item Opciones de filtrado disponibles en el switch.
-		\item Justificación de la opción elegida.
-		\item Configuración aplicada (ACLs en capa 3, VACLs, etc.).
+		\item Proporcionan control granular del tráfico inter-VLAN a nivel de capa 3.
+		\item Permiten implementar la política de aislamiento entre VLANs definida en la Tabla 1.
+		\item Son más adecuadas para controlar el tráfico entre subredes diferentes.
+		\item Se integran eficientemente con el enrutamiento inter-VLAN del switch.
+		\item Ofrecen mejor rendimiento que VACLs para tráfico entre VLANs.
 	\end{itemize}
+	
+	\paragraph{Configuración Aplicada:}
+	Se implementaron tres ACLs extendidas (VLAN16, VLAN17, VLAN18) aplicadas en las respectivas interfaces SVI con política de entrada (in).
+	
+	\subparagraph{ACL para VLAN 16:}
+	Aislamiento de la VLAN de alumnos y control de acceso a servicios.
+	
+	\begin{lstlisting}[language=bash, caption=ACL VLAN16 - Control de tráfico para VLAN de alumnos, label=lst:acl-vlan16]
+		ip access-list extended VLAN16
+		permit udp any any eq bootps      ! DHCP server (67)
+		permit udp any any eq bootpc      ! DHCP client (68)
+		deny   ip 10.4.16.0 0.0.0.255 10.4.17.0 0.0.0.255    ! Bloquear VLAN17
+		deny   ip 10.4.16.0 0.0.0.255 10.4.18.0 0.0.0.255    ! Bloquear VLAN18
+		deny   ip 10.4.16.0 0.0.0.255 10.4.245.0 0.0.0.255   ! Bloquear VLAN Admin
+		deny   ip 10.4.16.0 0.0.0.255 10.4.0.0 0.0.0.3       ! Bloquear enlace FW
+		permit tcp 10.4.16.0 0.0.0.255 any eq www            ! HTTP saliente
+		permit tcp 10.4.16.0 0.0.0.255 any eq 443            ! HTTPS saliente
+		permit udp 10.4.16.0 0.0.0.255 any eq domain         ! DNS UDP saliente
+		permit tcp 10.4.16.0 0.0.0.255 any eq domain         ! DNS TCP saliente
+		permit icmp 10.4.16.0 0.0.0.255 any                  ! ICMP saliente
+	\end{lstlisting}
+	
+	\subparagraph{ACL para VLAN 17:}
+	Aislamiento de la VLAN de PDI y control de acceso a servicios.
+	
+	\begin{lstlisting}[language=bash, caption=ACL VLAN17 - Control de tráfico para VLAN de PDI, label=lst:acl-vlan17]
+		ip access-list extended VLAN17
+		permit udp any any eq bootps      ! DHCP server (67)
+		permit udp any any eq bootpc      ! DHCP client (68)
+		deny   ip 10.4.17.0 0.0.0.255 10.4.16.0 0.0.0.255    ! Bloquear VLAN16
+		deny   ip 10.4.17.0 0.0.0.255 10.4.18.0 0.0.0.255    ! Bloquear VLAN18
+		deny   ip 10.4.17.0 0.0.0.255 10.4.245.0 0.0.0.255   ! Bloquear VLAN Admin
+		deny   ip 10.4.17.0 0.0.0.255 10.4.0.0 0.0.0.3       ! Bloquear enlace FW
+		permit tcp 10.4.17.0 0.0.0.255 any eq www            ! HTTP saliente
+		permit tcp 10.4.17.0 0.0.0.255 any eq 443            ! HTTPS saliente
+		permit udp 10.4.17.0 0.0.0.255 any eq domain         ! DNS UDP saliente
+		permit tcp 10.4.17.0 0.0.0.255 any eq domain         ! DNS TCP saliente
+		permit icmp 10.4.17.0 0.0.0.255 any                  ! ICMP saliente
+	\end{lstlisting}
+	
+	\subparagraph{ACL para VLAN 18:}
+	Aislamiento de la VLAN de PAS y control de acceso a servicios.
+	
+	\begin{lstlisting}[language=bash, caption=ACL VLAN18 - Control de tráfico para VLAN de PAS, label=lst:acl-vlan18]
+		ip access-list extended VLAN18
+		permit udp any any eq bootps      ! DHCP server (67)
+		permit udp any any eq bootpc      ! DHCP client (68)
+		deny   ip 10.4.18.0 0.0.0.255 10.4.16.0 0.0.0.255    ! Bloquear VLAN16
+		deny   ip 10.4.18.0 0.0.0.255 10.4.17.0 0.0.0.255    ! Bloquear VLAN17
+		deny   ip 10.4.18.0 0.0.0.255 10.4.245.0 0.0.0.255   ! Bloquear VLAN Admin
+		deny   ip 10.4.18.0 0.0.0.255 10.4.0.0 0.0.0.3       ! Bloquear enlace FW
+		permit tcp 10.4.18.0 0.0.0.255 any eq www            ! HTTP saliente
+		permit tcp 10.4.18.0 0.0.0.255 any eq 443            ! HTTPS saliente
+		permit udp 10.4.18.0 0.0.0.255 any eq domain         ! DNS UDP saliente
+		permit tcp 10.4.18.0 0.0.0.255 any eq domain         ! DNS TCP saliente
+		permit icmp 10.4.18.0 0.0.0.255 any                  ! ICMP saliente
+	\end{lstlisting}
+	
+	\paragraph{Aplicación de las ACLs en Interfaces SVI:}
+	Las ACLs se aplicaron en las interfaces virtuales de cada VLAN con política de entrada:
+	
+	\begin{lstlisting}[language=bash, caption=Aplicación de ACLs en interfaces SVI, label=lst:aplicacion-acls-svi]
+		interface Vlan16
+		ip address 10.4.16.1 255.255.255.0
+		ip access-group VLAN16 in      ! Aplicar ACL entrada
+		ip helper-address 10.4.245.100 ! Reenvío DHCP
+		
+		interface Vlan17
+		ip address 10.4.17.1 255.255.255.0
+		ip access-group VLAN17 in      ! Aplicar ACL entrada
+		ip helper-address 10.4.245.100 ! Reenvío DHCP
+		
+		interface Vlan18
+		ip address 10.4.18.1 255.255.255.0
+		ip access-group VLAN18 in      ! Aplicar ACL entrada
+		ip helper-address 10.4.245.100 ! Reenvío DHCP
+	\end{lstlisting}
+	
+	\paragraph{Análisis de la Configuración:}
+	\begin{itemize}
+		\item \textbf{Aislamiento entre VLANs:} Cada ACL bloquea explícitamente el tráfico hacia las otras VLANs de usuario y hacia la VLAN de administración.
+		\item \textbf{Acceso a servicios:} Se permite tráfico HTTP, HTTPS, DNS e ICMP saliente hacia cualquier destino.
+		\item \textbf{Excepciones DHCP:} Se permiten puertos 67 y 68 para el funcionamiento de DHCP.
+		\item \textbf{Blindaje administrativo:} Se bloquea el acceso directo a la VLAN de administración (745) y al enlace con el firewall.
+		\item \textbf{Política implícita:} Por defecto, todo el tráfico no explícitamente permitido es denegado (deny ip any any implícito).
+	\end{itemize}
+	
+	Esta configuración implementa una defensa en profundidad, donde el DL-SW1 actúa como segunda barrera de seguridad que impide la comunicación lateral no autorizada entre segmentos de red, mientras que el firewall controla el tráfico hacia/desde Internet y la DMZ.
 	
 	\subsection{Parte 3: Configuración de NAT}
 	\label{sec:lab8:parte3}
@@ -471,32 +818,1144 @@
 	\section{Running-Configs}
 	\label{sec:runningconfigs}
 	
-	\subsection{Configuración del Firewall (FW)}
+	\subsection{Configuración del Firewall (FW) para CBAC}
 	\label{sec:runningconfigs:fw}
 	
-	\begin{lstlisting}[language=bash, caption=Configuración del Firewall, label=lst:fw_config]
-		% Configuración completa del firewall con ACLs, CBAC/ZBFW y NAT
+	\begin{lstlisting}[language=bash, caption=Configuración completa del Firewall FW, label=lst:fw_config]
+		Current configuration : 5979 bytes
+		!
+		! Last configuration change at 11:19:32 UTC Fri Dec 12 2025 by munics
+		!
+		version 15.4
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname fw
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		!
+		enable secret 5 $1$a48E$tDRpNmlo4YFCSk5yjDWan.
+		enable password munics
+		!
+		aaa new-model
+		!
+		!
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		!
+		!
+		!
+		!
+		aaa session-id common
+		memory-size iomem 15
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		no ip domain lookup
+		ip domain name munics.pri
+		ip inspect name CBAC-FW tcp
+		ip inspect name CBAC-FW udp
+		ip inspect name CBAC-FW icmp
+		ip inspect name CBAC-FW http
+		ip inspect name CBAC-FW https
+		ip inspect name CBAC-FW ssh
+		ip cef
+		no ipv6 cef
+		!
+		multilink bundle-name authenticated
+		!
+		!
+		!
+		license udi pid CISCO1941/K9 sn FCZ161592Q9
+		!
+		!
+		username juniorAdmin secret 5 $1$Hhd7$wqazFV5ZhbaQ1ima.Yj5l/
+		username admin privilege 15 secret 5 $1$j23q$dXaSI0x7EL24ZPTqWYIT7/
+		!
+		redundancy
+		!
+		!
+		!
+		!
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		interface Embedded-Service-Engine0/0
+		no ip address
+		shutdown
+		!
+		interface GigabitEthernet0/0
+		no ip address
+		duplex auto
+		speed auto
+		!
+		interface GigabitEthernet0/0.2
+		encapsulation dot1Q 2
+		ip address 10.4.0.2 255.255.255.252
+		ip access-group lista_CBAC in
+		ip inspect CBAC-FW in
+		ip ospf network point-to-point
+		!
+		interface GigabitEthernet0/0.745
+		encapsulation dot1Q 745
+		ip address 10.4.245.3 255.255.255.0
+		!
+		interface GigabitEthernet0/0.746
+		encapsulation dot1Q 746
+		ip address 10.4.246.1 255.255.255.0
+		ip access-group lista_dmz in
+		ip inspect CBAC-FW in
+		!
+		interface GigabitEthernet0/1
+		ip address 10.4.0.5 255.255.255.252
+		ip access-group FW_INTERNET_IN in
+		ip inspect CBAC-FW in
+		ip ospf network point-to-point
+		duplex auto
+		speed auto
+		!
+		interface Serial0/0/0
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		interface Serial0/0/1
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		router ospf 10
+		router-id 3.3.3.3
+		passive-interface default
+		no passive-interface GigabitEthernet0/0.2
+		no passive-interface GigabitEthernet0/1
+		network 10.4.0.0 0.0.255.255 area 0
+		!
+		ip forward-protocol nd
+		!
+		no ip http server
+		no ip http secure-server
+		!
+		ip route 192.0.0.1 255.255.255.255 10.4.0.6
+		!
+		ip access-list extended FW_INTERNET_IN
+		remark Internet a Servicios (HTTPS especifico + ICMP)
+		permit icmp any 10.4.246.0 0.0.0.255
+		permit tcp any host 10.4.246.38 eq 443
+		remark Permitir OSPF para enrutamiento
+		permit ospf host 10.4.0.5 host 224.0.0.5
+		permit ospf host 10.4.0.5 host 10.4.0.6
+		permit ospf host 10.4.0.6 host 224.0.0.5
+		permit ospf host 10.4.0.6 host 10.4.0.5
+		remark Denegar todo lo demas
+		deny   ip any any log
+		ip access-list extended lista_CBAC
+		remark VLAN16 -> Servicios (DNS, HTTP, HTTPS, ICMP)
+		permit udp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit icmp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		remark VLAN16 -> Internet (HTTP, HTTPS, DNS, ICMP)
+		permit tcp 10.4.16.0 0.0.0.255 any eq www
+		permit tcp 10.4.16.0 0.0.0.255 any eq 443
+		permit udp 10.4.16.0 0.0.0.255 any eq domain
+		permit icmp 10.4.16.0 0.0.0.255 any
+		remark VLAN17 -> Servicios (DNS, HTTP, HTTPS, ICMP)
+		permit udp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit icmp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		remark VLAN17 -> Internet (HTTP, HTTPS, DNS, ICMP)
+		permit tcp 10.4.17.0 0.0.0.255 any eq www
+		permit tcp 10.4.17.0 0.0.0.255 any eq 443
+		permit udp 10.4.17.0 0.0.0.255 any eq domain
+		permit icmp 10.4.17.0 0.0.0.255 any
+		remark VLAN18 -> Servicios (DNS, HTTP, HTTPS, ICMP)
+		permit udp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit icmp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		remark VLAN18 -> Internet (HTTP, HTTPS, DNS, ICMP)
+		permit tcp 10.4.18.0 0.0.0.255 any eq www
+		permit tcp 10.4.18.0 0.0.0.255 any eq 443
+		permit udp 10.4.18.0 0.0.0.255 any eq domain
+		permit icmp 10.4.18.0 0.0.0.255 any
+		remark ADMIN -> SSH anywhere
+		permit tcp 10.4.245.0 0.0.0.255 any eq 22
+		remark Permitir OSPF para enrutamiento
+		permit ospf host 10.4.0.1 host 224.0.0.5
+		permit ospf host 10.4.0.1 host 10.4.0.2
+		permit ospf host 10.4.0.2 host 224.0.0.5
+		permit ospf host 10.4.0.2 host 10.4.0.1
+		remark === REGLAS DE RETORNO PARA SESIONES ESTABLECIDAS ===
+		permit tcp any any established
+		permit udp any any eq domain
+		permit icmp any any echo-reply
+		permit icmp any any time-exceeded
+		permit icmp any any unreachable
+		permit icmp any any echo
+		remark === DENEGAR TODO LO DEMAS ===
+		deny   ip any any log
+		ip access-list extended lista_dmz
+		permit tcp 10.4.246.0 0.0.0.255 eq www any
+		permit tcp 10.4.246.0 0.0.0.255 eq 443 any
+		permit udp 10.4.246.0 0.0.0.255 eq domain any
+		permit icmp 10.4.246.0 0.0.0.255 any
+		permit icmp any 10.4.246.0 0.0.0.255 echo-reply
+		permit tcp any any established
+		deny   ip any any log
+		!
+		!
+		!
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813 key Bayern_2025
+		!
+		!
+		!
+		control-plane
+		!
+		!
+		!
+		line con 0
+		password munics
+		line aux 0
+		line 2
+		no activation-character
+		no exec
+		transport preferred none
+		transport output lat pad telnet rlogin lapb-ta mop udptn v120 ssh
+		stopbits 1
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		scheduler allocate 20000 1000
+		!
+		end
+	\end{lstlisting}
+	
+	\subsection{Configuración del Router Firewall con Zone-Based Firewall (FW-ZBFW)}
+	\label{sec:runningconfigs:fw_zbfw}
+	
+	\begin{lstlisting}[language=bash, caption=Configuración del Firewall con Zone-Based Firewall, label=lst:fw_zbfw_config]
+		! Last configuration change at 11:21:40 UTC Thu Dec 11 2025 by munics
+		!
+		version 15.4
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname fw
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		!
+		enable secret 5 $1$a48E$tDRpNmlo4YFCSk5yjDWan.
+		enable password munics
+		!
+		aaa new-model
+		!
+		!
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		!
+		!
+		!
+		!
+		aaa session-id common
+		memory-size iomem 15
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		no ip domain lookup
+		ip domain name munics.pri
+		ip cef
+		no ipv6 cef
+		!
+		multilink bundle-name authenticated
+		!
+		!
+		!
+		license udi pid CISCO1941/K9 sn FCZ161592Q9
+		!
+		!
+		username juniorAdmin secret 5 $1$Hhd7$wqazFV5ZhbaQ1ima.Yj5l/
+		username admin privilege 15 secret 5 $1$j23q$dXaSI0x7EL24ZPTqWYIT7/
+		!
+		redundancy
+		!
+		!
+		!
+		!
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		class-map type inspect match-all CM-OSPF
+		match access-group name ACL-OSPF
+		class-map type inspect match-all CM-OUTSIDE-TO-DMZ
+		match access-group name ACL-OUTSIDE-TO-DMZ
+		class-map type inspect match-all CM-DMZ-TO-OUTSIDE
+		match access-group name ACL-DMZ-TO-OUTSIDE
+		class-map type inspect match-all CM-INSIDE-TO-OUTSIDE
+		match access-group name ACL-INSIDE-TO-OUTSIDE
+		class-map type inspect match-all CM-INSIDE-TO-DMZ
+		match access-group name ACL-INSIDE-TO-DMZ
+		!
+		policy-map type inspect PM-DMZ-TO-OUTSIDE
+		class type inspect CM-DMZ-TO-OUTSIDE
+		inspect
+		class class-default
+		drop log
+		policy-map type inspect PM-INSIDE-TO-OUTSIDE
+		class type inspect CM-INSIDE-TO-OUTSIDE
+		inspect
+		class type inspect CM-OSPF
+		pass
+		class class-default
+		drop log
+		policy-map type inspect PM-OUTSIDE-TO-DMZ
+		class type inspect CM-OUTSIDE-TO-DMZ
+		inspect
+		class class-default
+		drop
+		policy-map type inspect PM-INSIDE-TO-DMZ
+		class type inspect CM-INSIDE-TO-DMZ
+		inspect
+		class type inspect CM-OSPF
+		pass
+		class class-default
+		drop log
+		!
+		zone security OUTSIDE
+		description Zona no confiable (Internet)
+		zone security DMZ
+		description Zona desmilitarizada (Servidores Publicos)
+		zone security INSIDE
+		description Zona de confianza (Usuarios y Admin)
+		zone-pair security ZP-IN-OUT source INSIDE destination OUTSIDE
+		service-policy type inspect PM-INSIDE-TO-OUTSIDE
+		zone-pair security ZP-IN-DMZ source INSIDE destination DMZ
+		service-policy type inspect PM-INSIDE-TO-DMZ
+		zone-pair security ZP-DMZ-OUT source DMZ destination OUTSIDE
+		service-policy type inspect PM-DMZ-TO-OUTSIDE
+		zone-pair security ZP-OUT-DMZ source OUTSIDE destination DMZ
+		service-policy type inspect PM-OUTSIDE-TO-DMZ
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		interface Embedded-Service-Engine0/0
+		no ip address
+		shutdown
+		!
+		interface GigabitEthernet0/0
+		no ip address
+		duplex auto
+		speed auto
+		!
+		interface GigabitEthernet0/0.2
+		encapsulation dot1Q 2
+		ip address 10.4.0.2 255.255.255.252
+		zone-member security INSIDE
+		ip ospf network point-to-point
+		!
+		interface GigabitEthernet0/0.745
+		encapsulation dot1Q 745
+		ip address 10.4.245.3 255.255.255.0
+		!
+		interface GigabitEthernet0/0.746
+		encapsulation dot1Q 746
+		ip address 10.4.246.1 255.255.255.0
+		zone-member security DMZ
+		!
+		interface GigabitEthernet0/1
+		ip address 10.4.0.5 255.255.255.252
+		zone-member security OUTSIDE
+		ip ospf network point-to-point
+		duplex auto
+		speed auto
+		!
+		interface Serial0/0/0
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		interface Serial0/0/1
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		router ospf 10
+		router-id 3.3.3.3
+		passive-interface default
+		no passive-interface GigabitEthernet0/0.2
+		no passive-interface GigabitEthernet0/1
+		network 10.4.0.0 0.0.255.255 area 0
+		!
+		ip forward-protocol nd
+		!
+		no ip http server
+		no ip http secure-server
+		!
+		!
+		ip access-list extended ACL-DMZ-TO-OUTSIDE
+		remark DMZ -> Internet (HTTP/HTTPS/DNS/ICMP)
+		permit tcp 10.4.246.0 0.0.0.255 any eq www
+		permit tcp 10.4.246.0 0.0.0.255 any eq 443
+		permit udp 10.4.246.0 0.0.0.255 any eq domain
+		permit icmp 10.4.246.0 0.0.0.255 any
+		ip access-list extended ACL-INSIDE-TO-DMZ
+		remark VLAN16 -> DMZ (Servicios)
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit udp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit icmp 10.4.16.0 0.0.0.255 10.4.246.0 0.0.0.255
+		remark VLAN17 -> DMZ (Servicios)
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit udp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit icmp 10.4.17.0 0.0.0.255 10.4.246.0 0.0.0.255
+		remark VLAN18 -> DMZ (Servicios)
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq www
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq 443
+		permit udp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit tcp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255 eq domain
+		permit icmp 10.4.18.0 0.0.0.255 10.4.246.0 0.0.0.255
+		remark VLAN16 -> DMZ (HTTP/HTTPS/DNS/ICMP)
+		remark VLAN17 -> DMZ
+		remark VLAN18 -> DMZ
+		ip access-list extended ACL-INSIDE-TO-OUTSIDE
+		remark VLAN16 -> Internet
+		permit tcp 10.4.16.0 0.0.0.255 any eq www
+		permit tcp 10.4.16.0 0.0.0.255 any eq 443
+		permit udp 10.4.16.0 0.0.0.255 any eq domain
+		permit tcp 10.4.16.0 0.0.0.255 any eq domain
+		permit icmp 10.4.16.0 0.0.0.255 any
+		remark VLAN17 -> Internet
+		permit tcp 10.4.17.0 0.0.0.255 any eq www
+		permit tcp 10.4.17.0 0.0.0.255 any eq 443
+		permit udp 10.4.17.0 0.0.0.255 any eq domain
+		permit tcp 10.4.17.0 0.0.0.255 any eq domain
+		permit icmp 10.4.17.0 0.0.0.255 any
+		remark VLAN18 -> Internet
+		permit tcp 10.4.18.0 0.0.0.255 any eq www
+		permit tcp 10.4.18.0 0.0.0.255 any eq 443
+		permit udp 10.4.18.0 0.0.0.255 any eq domain
+		permit tcp 10.4.18.0 0.0.0.255 any eq domain
+		permit icmp 10.4.18.0 0.0.0.255 any
+		ip access-list extended ACL-OSPF
+		remark OSPF entre todos los routers
+		permit ospf host 10.4.0.1 host 224.0.0.5
+		permit ospf host 10.4.0.1 host 10.4.0.2
+		permit ospf host 10.4.0.2 host 224.0.0.5
+		permit ospf host 10.4.0.2 host 10.4.0.1
+		permit ospf host 10.4.0.5 host 224.0.0.5
+		permit ospf host 10.4.0.5 host 10.4.0.6
+		permit ospf host 10.4.0.6 host 224.0.0.5
+		permit ospf host 10.4.0.6 host 10.4.0.5
+		ip access-list extended ACL-OUTSIDE-TO-DMZ
+		remark Internet -> Servidor HTTPS en DMZ + Ping
+		permit icmp any host 10.4.246.38
+		permit tcp any host 10.4.246.38 eq 443
+		!
+		!
+		!
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813 key Bayern_2025
+		!
+		!
+		!
+		control-plane
+		!
+		!
+		!
+		line con 0
+		password munics
+		line aux 0
+		line 2
+		no activation-character
+		no exec
+		transport preferred none
+		transport output lat pad telnet rlogin lapb-ta mop udptn v120 ssh
+		stopbits 1
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		scheduler allocate 20000 1000
+		!
+		end
 	\end{lstlisting}
 	
 	\subsection{Configuración del Router CPE}
 	\label{sec:runningconfigs:cpe}
 	
-	\begin{lstlisting}[language=bash, caption=Configuración del Router CPE, label=lst:cpe_config]
-		% Configuración NAT y reglas de filtrado en CPE
+	\begin{lstlisting}[language=bash, caption=Configuración completa del Router CPE, label=lst:cpe_config]
+		Current configuration : 4083 bytes
+		!
+		! Last configuration change at 06:02:57 UTC Thu Feb 7 2036 by munics
+		!
+		version 15.4
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname CPE
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		!
+		enable secret 5 $1$GdZU$wjEfpZdqvFc/slyD.nmT4.
+		enable password munics
+		!
+		aaa new-model
+		!
+		!
+		aaa authentication login default group radius local enable
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authentication login ssh-login group radius local-case
+		aaa authorization exec default group radius local
+		!
+		!
+		!
+		!
+		!
+		aaa session-id common
+		memory-size iomem 15
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		no ip domain lookup
+		ip domain name munics.pri
+		ip cef
+		no ipv6 cef
+		!
+		multilink bundle-name authenticated
+		!
+		!
+		!
+		license udi pid CISCO1941/K9 sn FCZ1520C07N
+		!
+		!
+		username juniorAdmin secret 5 $1$kRPU$yy5tuKlqErLUXYYvtwjOZ.
+		username admin privilege 15 secret 5 $1$vHGy$Bg1OGfhpYB6RjnZFvWVgC1
+		!
+		redundancy
+		!
+		!
+		!
+		!
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		interface Embedded-Service-Engine0/0
+		no ip address
+		shutdown
+		!
+		interface GigabitEthernet0/0
+		no ip address
+		duplex auto
+		speed auto
+		!
+		interface GigabitEthernet0/0.3
+		encapsulation dot1Q 3
+		ip address 10.4.0.6 255.255.255.252
+		ip nat inside
+		ip virtual-reassembly in
+		ip ospf network point-to-point
+		!
+		interface GigabitEthernet0/0.745
+		encapsulation dot1Q 745
+		ip address 10.4.245.4 255.255.255.0
+		!
+		interface GigabitEthernet0/1
+		ip address 192.0.4.1 255.255.255.0
+		ip access-group 10 in
+		ip nat outside
+		ip virtual-reassembly in
+		duplex auto
+		speed auto
+		!
+		interface Serial0/0/0
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		interface Serial0/0/1
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		router ospf 10
+		router-id 4.4.4.4
+		passive-interface default
+		no passive-interface GigabitEthernet0/0.3
+		network 10.4.0.0 0.0.255.255 area 0
+		default-information originate
+		!
+		ip forward-protocol nd
+		!
+		no ip http server
+		no ip http secure-server
+		!
+		ip nat pool POOL_ALUMNOS 192.0.4.200 192.0.4.200 netmask 255.255.255.0
+		ip nat pool POOL_PDI 192.0.4.201 192.0.4.201 netmask 255.255.255.0
+		ip nat pool POOL_PAS 192.0.4.202 192.0.4.202 netmask 255.255.255.0
+		ip nat inside source list ACL_NAT_ALUMNOS pool POOL_ALUMNOS overload
+		ip nat inside source list ACL_NAT_PAS pool POOL_PAS overload
+		ip nat inside source list ACL_NAT_PDI pool POOL_PDI overload
+		ip nat inside source static tcp 10.4.246.38 80 192.0.4.203 80 extendable
+		ip nat inside source static tcp 10.4.246.38 443 192.0.4.203 443 extendable
+		ip route 0.0.0.0 0.0.0.0 192.0.4.2
+		ip route 192.0.0.0 255.255.255.0 192.0.4.2
+		!
+		ip access-list standard ACL_NAT_ALUMNOS
+		permit 10.4.16.0 0.0.0.255
+		ip access-list standard ACL_NAT_PAS
+		permit 10.4.18.0 0.0.0.255
+		ip access-list standard ACL_NAT_PDI
+		permit 10.4.17.0 0.0.0.255
+		!
+		!
+		!
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		access-list 10 deny   255.255.255.255
+		access-list 10 deny   0.0.0.0 0.255.255.255
+		access-list 10 deny   10.0.0.0 0.255.255.255
+		access-list 10 deny   100.64.0.0 0.63.255.255
+		access-list 10 deny   127.0.0.0 0.255.255.255
+		access-list 10 deny   169.254.0.0 0.0.255.255
+		access-list 10 deny   172.16.0.0 0.15.255.255
+		access-list 10 deny   192.88.99.0 0.0.0.255
+		access-list 10 deny   192.168.0.0 0.0.255.255
+		access-list 10 deny   198.18.0.0 0.1.255.255
+		access-list 10 deny   198.51.100.0 0.0.0.255
+		access-list 10 deny   203.0.113.0 0.0.0.255
+		access-list 10 deny   224.0.0.0 15.255.255.255
+		access-list 10 deny   240.0.0.0 15.255.255.255
+		access-list 10 permit any
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813
+		radius-server key Bayern_2025
+		!
+		radius server DL-SW-RADIUS
+		!
+		radius server CPE-RADIUS
+		!
+		!
+		!
+		control-plane
+		!
+		!
+		!
+		line con 0
+		password munics
+		line aux 0
+		line 2
+		no activation-character
+		no exec
+		transport preferred none
+		transport output lat pad telnet rlogin lapb-ta mop udptn v120 ssh
+		stopbits 1
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication ssh-login
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication ssh-login
+		transport input ssh
+		!
+		scheduler allocate 20000 1000
+		!
+		end
 	\end{lstlisting}
 	
-	\subsection{Configuración del Switch DL-SW1}
+	\subsection{Configuración del Switch de Distribución (DL-SW1)}
 	\label{sec:runningconfigs:dlsw1}
 	
-	\begin{lstlisting}[language=bash, caption=Configuración del Switch DL-SW1, label=lst:dl_sw1_config]
-		% Configuración de filtrado entre VLANs
+	\begin{lstlisting}[language=bash, caption=Configuración completa del Switch DL-SW1, label=lst:dl_sw1_config]
+		Current configuration : 5321 bytes
+		!
+		version 12.2
+		no service pad
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname DL-SW1
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		enable secret 5 $1$h4mP$R/iJAmdAFuSOG0hT31MoL/
+		enable password munics
+		!
+		username juniorAdmin secret 5 $1$Kv2T$zH/V14q21ulpWg.CkcYOX.
+		username admin privilege 15 secret 5 $1$/Bku$u1UXOu1a5D3u8XSooyC0P1
+		!
+		!
+		aaa new-model
+		!
+		!
+		aaa group server radius RADIUS-GROUP
+		!
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		!
+		!
+		aaa session-id common
+		system mtu routing 1500
+		ip routing
+		no ip domain-lookup
+		ip domain-name munics.pri
+		!
+		!
+		!
+		!
+		crypto pki trustpoint TP-self-signed-3123997184
+		enrollment selfsigned
+		subject-name cn=IOS-Self-Signed-Certificate-3123997184
+		revocation-check none
+		rsakeypair TP-self-signed-3123997184
+		!
+		!
+		!
+		!
+		!
+		!
+		spanning-tree mode pvst
+		spanning-tree extend system-id
+		spanning-tree vlan 16-18,745 priority 24576
+		!
+		vlan internal allocation policy ascending
+		!
+		ip ssh time-out 60
+		ip ssh authentication-retries 2
+		ip ssh version 2
+		!
+		!
+		!
+		interface FastEthernet0/1
+		switchport mode access
+		switchport port-security maximum 10
+		switchport port-security
+		switchport port-security mac-address sticky
+		!
+		interface FastEthernet0/2
+		!
+		interface FastEthernet0/3
+		!
+		interface FastEthernet0/4
+		!
+		interface FastEthernet0/5
+		!
+		interface FastEthernet0/6
+		!
+		interface FastEthernet0/7
+		!
+		interface FastEthernet0/8
+		!
+		interface FastEthernet0/9
+		!
+		interface FastEthernet0/10
+		!
+		interface FastEthernet0/11
+		!
+		interface FastEthernet0/12
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 16-18,745
+		switchport mode trunk
+		!
+		interface FastEthernet0/13
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 2,745,746
+		switchport mode trunk
+		!
+		interface FastEthernet0/14
+		switchport access vlan 3
+		switchport mode access
+		!
+		interface FastEthernet0/15
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 3,745
+		switchport mode trunk
+		!
+		interface FastEthernet0/16
+		switchport access vlan 4
+		switchport mode access
+		!
+		interface FastEthernet0/17
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 4,745
+		switchport mode trunk
+		!
+		interface FastEthernet0/18
+		!
+		interface FastEthernet0/19
+		!
+		interface FastEthernet0/20
+		!
+		interface FastEthernet0/21
+		!
+		interface FastEthernet0/22
+		!
+		interface FastEthernet0/23
+		!
+		interface FastEthernet0/24
+		switchport trunk encapsulation dot1q
+		switchport trunk allowed vlan 745,746
+		switchport mode trunk
+		!
+		interface GigabitEthernet0/1
+		!
+		interface GigabitEthernet0/2
+		!
+		interface Vlan1
+		no ip address
+		!
+		interface Vlan2
+		ip address 10.4.0.1 255.255.255.252
+		ip ospf network point-to-point
+		!
+		interface Vlan16
+		ip address 10.4.16.1 255.255.255.0
+		ip access-group VLAN16 in
+		ip helper-address 10.4.245.100
+		!
+		interface Vlan17
+		ip address 10.4.17.1 255.255.255.0
+		ip access-group VLAN17 in
+		ip helper-address 10.4.245.100
+		!
+		interface Vlan18
+		ip address 10.4.18.1 255.255.255.0
+		ip access-group VLAN18 in
+		ip helper-address 10.4.245.100
+		!
+		interface Vlan745
+		ip address 10.4.245.2 255.255.255.0
+		!
+		router ospf 10
+		router-id 2.2.2.2
+		log-adjacency-changes
+		passive-interface default
+		no passive-interface Vlan2
+		network 10.4.0.0 0.0.255.255 area 0
+		!
+		ip classless
+		ip route 0.0.0.0 0.0.0.0 10.4.0.2
+		ip http server
+		ip http secure-server
+		!
+		!
+		ip access-list extended VLAN16
+		permit udp any any eq bootps
+		permit udp any any eq bootpc
+		deny   ip 10.4.16.0 0.0.0.255 10.4.17.0 0.0.0.255
+		deny   ip 10.4.16.0 0.0.0.255 10.4.18.0 0.0.0.255
+		deny   ip 10.4.16.0 0.0.0.255 10.4.245.0 0.0.0.255
+		deny   ip 10.4.16.0 0.0.0.255 10.4.0.0 0.0.0.3
+		permit tcp 10.4.16.0 0.0.0.255 any eq www
+		permit tcp 10.4.16.0 0.0.0.255 any eq 443
+		permit udp 10.4.16.0 0.0.0.255 any eq domain
+		permit tcp 10.4.16.0 0.0.0.255 any eq domain
+		permit icmp 10.4.16.0 0.0.0.255 any
+		ip access-list extended VLAN17
+		permit udp any any eq bootps
+		permit udp any any eq bootpc
+		deny   ip 10.4.17.0 0.0.0.255 10.4.16.0 0.0.0.255
+		deny   ip 10.4.17.0 0.0.0.255 10.4.18.0 0.0.0.255
+		deny   ip 10.4.17.0 0.0.0.255 10.4.245.0 0.0.0.255
+		deny   ip 10.4.17.0 0.0.0.255 10.4.0.0 0.0.0.3
+		permit tcp 10.4.17.0 0.0.0.255 any eq www
+		permit tcp 10.4.17.0 0.0.0.255 any eq 443
+		permit udp 10.4.17.0 0.0.0.255 any eq domain
+		permit tcp 10.4.17.0 0.0.0.255 any eq domain
+		permit icmp 10.4.17.0 0.0.0.255 any
+		ip access-list extended VLAN18
+		permit udp any any eq bootps
+		permit udp any any eq bootpc
+		deny   ip 10.4.18.0 0.0.0.255 10.4.16.0 0.0.0.255
+		deny   ip 10.4.18.0 0.0.0.255 10.4.17.0 0.0.0.255
+		deny   ip 10.4.18.0 0.0.0.255 10.4.245.0 0.0.0.255
+		deny   ip 10.4.18.0 0.0.0.255 10.4.0.0 0.0.0.3
+		permit tcp 10.4.18.0 0.0.0.255 any eq www
+		permit tcp 10.4.18.0 0.0.0.255 any eq 443
+		permit udp 10.4.18.0 0.0.0.255 any eq domain
+		permit tcp 10.4.18.0 0.0.0.255 any eq domain
+		permit icmp 10.4.18.0 0.0.0.255 any
+		!
+		ip sla enable reaction-alerts
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		!
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813 key Bayern_2025
+		!
+		!
+		line con 0
+		password munics
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		end
 	\end{lstlisting}
+	
 	
 	\subsection{Configuración del Router ISP}
 	\label{sec:runningconfigs:isp}
 	
 	\begin{lstlisting}[language=bash, caption=Configuración del Router ISP, label=lst:isp_config]
-		% Configuración de enrutamiento y posibles ACLs
+		Current configuration : 2222 bytes
+		!
+		! Last configuration change at 11:08:22 UTC Thu Mar 20 2025 by munics
+		!
+		version 15.4
+		service timestamps debug datetime msec
+		service timestamps log datetime msec
+		no service password-encryption
+		!
+		hostname ISP
+		!
+		boot-start-marker
+		boot-end-marker
+		!
+		!
+		enable secret 5 $1$Y1Sr$TxKfVgh6.IjLVIx9YtRSN/
+		enable password munics
+		!
+		aaa new-model
+		!
+		!
+		aaa authentication login default group radius local
+		aaa authentication login SSH-LOGIN group radius local-case
+		aaa authorization exec default group radius local
+		!
+		!
+		!
+		!
+		!
+		aaa session-id common
+		memory-size iomem 15
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		no ip domain lookup
+		ip domain name acme.pri
+		ip cef
+		no ipv6 cef
+		!
+		multilink bundle-name authenticated
+		!
+		!
+		!
+		license udi pid CISCO1941/K9 sn FCZ151592DL
+		!
+		!
+		username juniorAdmin secret 5 $1$iz50$zTkxSpdIv3CtwygyBrqWj0
+		username admin privilege 15 secret 5 $1$XEbC$I3tqFuyyCK.WqIu1Fx1mf1
+		!
+		redundancy
+		!
+		!
+		!
+		!
+		!
+		ip ssh time-out 60
+		ip ssh version 2
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		!
+		interface Embedded-Service-Engine0/0
+		no ip address
+		shutdown
+		!
+		interface GigabitEthernet0/0
+		no ip address
+		duplex auto
+		speed auto
+		!
+		interface GigabitEthernet0/0.4
+		encapsulation dot1Q 4
+		ip address 192.0.4.2 255.255.255.0
+		!
+		interface GigabitEthernet0/0.745
+		description VLAN-Pod4-adm
+		encapsulation dot1Q 745
+		ip address 10.4.245.5 255.255.255.0
+		!
+		interface GigabitEthernet0/1
+		ip address 192.0.0.4 255.255.255.0
+		duplex auto
+		speed auto
+		!
+		interface Serial0/0/0
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		interface Serial0/0/1
+		no ip address
+		shutdown
+		clock rate 2000000
+		!
+		ip forward-protocol nd
+		!
+		no ip http server
+		ip http secure-server
+		!
+		ip route 10.4.0.0 255.255.0.0 192.0.4.1
+		!
+		!
+		!
+		access-list 1 permit 10.4.245.0 0.0.0.255
+		access-list 1 deny   any
+		radius-server host 10.4.245.37 auth-port 1812 acct-port 1813 key Bayern_2025
+		!
+		!
+		!
+		control-plane
+		!
+		!
+		!
+		line con 0
+		password munics
+		line aux 0
+		line 2
+		no activation-character
+		no exec
+		transport preferred none
+		transport output lat pad telnet rlogin lapb-ta mop udptn v120 ssh
+		stopbits 1
+		line vty 0 4
+		access-class 1 in
+		password munics
+		login authentication SSH-LOGIN
+		transport input ssh
+		line vty 5 15
+		access-class 1 in
+		login authentication SSH-LOGIN
+		transport input ssh
+		!
+		scheduler allocate 20000 1000
+		!
+		end
 	\end{lstlisting}
 	
 \end{document}
