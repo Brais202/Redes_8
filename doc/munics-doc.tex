@@ -13,6 +13,14 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{float}
+\newcommand{\pathServ}{images/servicios/}
+\newcommand{\pathAcls}{images/acls/}
+\newcommand{\pathNat}{images/nat/}
+\newcommand{\pathZbfw}{images/zbfw/}
+\newcommand{\pathTests}{images/pruebas/}
+\newcommand{\pathRoot}{images/}
+
+
 
 % Definición de colores para código
 \definecolor{codegreen}{rgb}{0,0.6,0}
@@ -68,25 +76,11 @@
 	\section{Introducción}
 	\label{sec:intro}
 	
-	\subsection{Sobre esta Documentación}
-	\label{sec:intro:about}
-	
-	Esta documentación recoge la implementación y resultados del Laboratorio 8 de Seguridad de Redes, centrado en la configuración de seguridad perimetral mediante firewalls, listas de control de acceso (ACL) y traducción de direcciones de red (NAT).
-	
-	\subsection{Topología y Objetivos}
-	\label{sec:intro:topologia}
-	
-	Breve descripción de la topología física y lógica del laboratorio. Incluir aquí un diagrama general de la red con las diferentes zonas de seguridad (VLANs, Internet, etc.).
-	
-	\textbf{Objetivos del laboratorio:}
-	\begin{itemize}
-		\item Implementar políticas de seguridad perimetral mediante filtrado de paquetes.
-		\item Configurar diferentes tipos de ACL (estándar, extendidas, basadas en zonas).
-		\item Implementar CBAC (Context-Based Access Control) y ZBFW (Zone-Based Firewall).
-		\item Configurar NAT (PAT dinámico y port forwarding).
-		\item Comprender la interacción entre NAT y las reglas de filtrado.
-		\item Garantizar el funcionamiento de protocolos de gestión y control de red.
-	\end{itemize}
+	A continuación se presenta la memoria de este laboratorio, donde se explica cómo se desarrolló toda la práctica paso a paso. 
+	En este documento se describe la configuración realizada en cada parte del entorno, incluyendo la puesta en marcha de los
+	servidores, la aplicación de filtros y reglas de seguridad, la configuración del firewall con distintas técnicas, 
+	la implementación de NAT y port forwarding, así como las pruebas finales de conectividad para verificar que todo 
+	funciona correctamente.
 	
 	\section{Laboratorio 8: Seguridad Perimetral}
 	\label{sec:lab8}
@@ -94,17 +88,132 @@
 	\subsection{Parte 1: Despliegue de Servicios}
 	\label{sec:lab8:parte1}
 	
-	\subsubsection{Configuración de Servidores}
-	\label{sec:lab8:servidores}
+	En esta primera parte del laboratorio se preparó la infraestructura básica necesaria para que las distintas VLAN del entorno pudieran acceder a servicios internos comunes. 
+	Para ello, en la VLAN de servicios se desplegaron tres componentes principales: un servidor web accesible tanto por HTTP como por HTTPS, y un servidor DNS encargado de resolver los nombres del dominio interno. 
+
+	\subsubsection{Configuración del servidor HTTP y HTTPS}
+	\label{sec:lab8:servidores:http}
 	
-	Descripción general del despliegue de servicios en la VLAN de servicios:
+	Se decidió configurar el servidor web sobre \texttt{nginx}.\\
+	Para habilitar HTTPS fue necesaria la creación de un certificado SSL autofirmado por nginx. Este procedimiento se muestra en la Figura \ref{fig:nginx1}:
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ nginx_config_1.png}
+		\caption{Generación y firma del certificado SSL.}
+		\label{fig:nginx1}
+	\end{figure}
+	
+	A continuación creamos y configuramos las carpetas de la web. En la Figura \ref{fig:nginx2} se muestran los distintos comandos utilizados para la creación y configuración de la carpeta de la web. En conjunto se realiza lo siguiente:
 	\begin{itemize}
-		\item Servidor HTTP: dirección IP y puerto.
-		\item Servidor HTTPS: dirección IP y puerto.
-		\item Servidor DNS: dirección IP y puerto.
+		\item Creación de la carpeta del sitio web.
+		\item Se proporcionan permisos para que nginx sea capaz de acceder.
+		\item Creación del archivo de configuración de la web.
+		\item Link de los archivos a sites-enabled.
+		\item Comprobación de la configuración de nginx.
 	\end{itemize}
 	
-	\textbf{Nota:} Indicar si se utilizan máquinas virtuales, contenedores, o software específico. Incluir capturas de configuración relevantes.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ nginx_config_2.png}
+		\caption{Creación de archivos necesarios para el servidor.}
+		\label{fig:nginx2}
+	\end{figure}
+	
+	Es necesario configurar el servidor web para manejar el tráfico HTTP y HTTPS. En la Figura \ref{fig:nginx_http} se muestra la configuración para manejar el tráfico HTTP.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ nginx_config_http.png}
+		\caption{Configuración nginx HTTP.}
+		\label{fig:nginx_http}
+	\end{figure}
+	
+
+	El servicio HTTPS se configuró tal como muestra la Figura \ref{fig:nginx_https}. 
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ nginx_config_https.png}
+		\caption{Configuración nginx HTTPS.}
+		\label{fig:nginx_https}
+	\end{figure}
+	
+	El contenido publicado consistió en una página HTML sencilla, mostrada en la Figura \ref{fig:nginx_html}:
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ nginx_config_indexhtml.png}
+		\caption{Contenido del archivo \texttt{index.html}}
+		\label{fig:nginx_html}
+	\end{figure}
+	
+	Finalmente, tal como se muestra en la Figura \ref{fig:nginx_acceso}, se comprueba que los clientes de la red podían acceder correctamente al servidor web.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ nginx_check_works.png}
+		\caption{Acceso al servidor web.}
+		\label{fig:nginx_acceso}
+	\end{figure}
+	
+	\subsubsection{Configuración del Servidor DNS}
+	\label{sec:lab8:servidores:dns}
+	
+	Para proporcionar resolución de nombres dentro de la red, se configuró un servidor DNS mediante \texttt{bind9}.
+	
+	Para el funcionamiento del servidor DNS se requirieron los siguientes pasos:
+	\begin{itemize}
+		\item Configurar las opciones principales del servidor DNS (\ref{fig:dns1}).
+		\item Definir la zona DNS que maneja el servidor (\ref{fig:dns})).
+		\item Creación de archivo de zona directa (\ref{fig:dns3})
+		\end{itemize}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ DNS_1.png}
+		\caption{Configuración inicial del servidor DNS.}
+		\label{fig:dns1}
+		
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ DNS_2.png}
+		\caption{Definición de la zona DNS interna.}
+		\label{fig:dns2}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ DNS_3.png}
+		\caption{Creación y definición de archivos de zona.}
+		\label{fig:dns3}
+	\end{figure}
+	
+	En la Figura \ref{fig:dns4} se comprueba todo lo implementado y el estado actual del servicio.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ DNS_4.png}
+		\caption{Comprobación del funcionamiento del servicio.}
+		\label{fig:dns4}
+	\end{figure}
+	
+	En la Figura \ref{fig:dns5} de muestra una prueba de la resolución DNS y acceso mediante HTTP.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ DNS_5.png}
+		\caption{Comprobación del funcionamiento del servicio, parte 2.}
+		\label{fig:dns5}
+	\end{figure}
+	
+	Por último, se comprueba el funcionamiento del servicio HTTPS en la Figura \ref{fig:dns6}.
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathServ DNS_6.png}
+		\caption{Comprobación del funcionamiento del servicio, parte 3.}
+		\label{fig:dns6}
+	\end{figure}
 	
 	\subsection{Parte 2: Configuración de Filtros en los Firewall}
 	\label{sec:lab8:parte2}
@@ -146,6 +255,91 @@
 		\item Comparación CBAC vs ZBFW (ventajas/desventajas en esta topología).
 	\end{itemize}
 	
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw class maps.png}
+		\caption{Class-maps para inspección de tráfico en el Zone-Based Firewall.}
+		\label{fig:zbfw_class_maps}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw policy map inside to outside .png}
+		\caption{Policy-map para tráfico \emph{inside} $\rightarrow$ \emph{outside}.}
+		\label{fig:zbfw_policy_inside_outside}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw policy map inside to dmz.png}
+		\caption{Policy-map para tráfico \emph{inside} $\rightarrow$ DMZ.}
+		\label{fig:zbfw_policy_inside_dmz}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw policy map dmz to outside.png}
+		\caption{Policy-map para tráfico DMZ $\rightarrow$ \emph{outside}.}
+		\label{fig:zbfw_policy_dmz_outside}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw policy map outside to dmz.png}
+		\caption{Policy-map para tráfico \emph{outside} $\rightarrow$ DMZ.}
+		\label{fig:zbfw_policy_outside_dmz}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw zone pair in-out.png}
+		\caption{Zone-pair entre las zonas \emph{inside} y \emph{outside}.}
+		\label{fig:zbfw_zonepair_in_out}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw zone pair in-dmz.png}
+		\caption{Zone-pair entre \emph{inside} y DMZ.}
+		\label{fig:zbfw_zonepair_in_dmz}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw zone pair dmz-out.png}
+		\caption{Zone-pair entre DMZ y \emph{outside}.}
+		\label{fig:zbfw_zonepair_dmz_out}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw zone pair out-dmz.png}
+		\caption{Zone-pair entre \emph{outside} y DMZ.}
+		\label{fig:zbfw_zonepair_out_dmz}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw zone securities.png}
+		\caption{Resumen de las zonas de seguridad configuradas en el firewall.}
+		\label{fig:zbfw_zone_securities}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw SSH_ZBFW.png}
+		\caption{Comprobación de acceso SSH protegido por el Zone-Based Firewall.}
+		\label{fig:zbfw_ssh}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathZbfw asignacion zonas a interfaces.png}
+		\caption{Asignación de interfaces físicas a zonas de seguridad.}
+		\label{fig:zbfw_zonas_interfaces}
+	\end{figure}
+	
 	\subsubsection{Filtrado en DL-SW1}
 	\label{sec:lab8:filtrado-switch}
 	
@@ -159,45 +353,103 @@
 	\subsection{Parte 3: Configuración de NAT}
 	\label{sec:lab8:parte3}
 	
-	\subsubsection{PAT Dinámico para Tráfico Saliente}
+	En esta parte del laboratorio se configuró la traducción de direcciones de red (NAT) en el CPE con el objetivo de permitir
+	que las distintas VLAN de la organización pudieran acceder a Internet utilizando direcciones IP públicas del rango asignado
+	al Pod. Además, se configuró port forwarding para publicar los servicios internos (HTTP y HTTPS) hacia el exterior.
+	
+	
+	\subsubsection{PAT dinámico para tráfico saliente}
 	\label{sec:lab8:pat}
+
+	Para implementar este comportamiento, el primer paso fue crear un pool de direcciones para cada VLAN. Estos pools permiten que se asignen direcciones dentro de un rango determinado para cada una de las VLANs. Se muestran en la imagen  TALTAL junto con las ACL necesarias para identificar el tráfico origen de cada red. \\
 	
-	Configuración de NAT overload (PAT) para las VLANs de usuario:
-	\begin{itemize}
-		\item VLAN 16: IP pública asignada.
-		\item VLAN 17: IP pública asignada.
-		\item VLAN 18: IP pública asignada.
-	\end{itemize}
+	%%%añadir imagen
 	
-	Incluir comandos de configuración NAT en el router CPE.
+	Las ACL generadas permiten clasificar el tráfico según la VLAN de origen, mientras que los pools determinan qué dirección pública se asignará a cada una de ellas. \\
+	
+	El siguiente paso consistió en asociar cada ACL con su pool correspondiente y activar PAT mediante la opción
+	\texttt{overload}. La figura TALTAL muestra este proceso: \\
+	
+	%%añadir imagen
+	
+	
+	A continuación, en la imagen \ref{fig:nat_interfaces} se configuran las interfaces como inside y outside. La interfaz GigabitEthernet0/0.3 se configura como \texttt{inside}, mientras que la interfaz GigabitEthernet0/1 se configura como \texttt{outside}.
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathNat asignacion nat a interfaces.png}
+		\caption{Asignación de NAT (inside/outside) a las interfaces.}
+		\label{fig:nat_interfaces}
+	\end{figure}
 	
 	\subsubsection{Port Forwarding para Servicios Internos}
 	\label{sec:lab8:portforwarding}
+	Se configuró port forwarding para permitir que clientes externos accedieran
+	a los servicios publicados por la organización en la VLAN de servicios. Para ello se ejecutan los comandos de la imagen \ref{fig:port_forwarding}.
 	
-	Configuración de NAT estático para permitir acceso externo a servicios:
-	\begin{itemize}
-		\item Servicio HTTPS: mapeo de IP y puerto.
-		\item Servicio HTTP: mapeo de IP y puerto.
-	\end{itemize}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathNat port forwarding.png}
+		\caption{Reglas de port forwarding para publicar servicios internos.}
+		\label{fig:port_forwarding}
+	\end{figure}
 	
 	\section{Pruebas y Verificación}
 	\label{sec:pruebas}
 	
-	\subsection{Verificación de Conectividad}
-	\label{sec:pruebas:conectividad}
+	A continuación de muestran distintas pruebas para comprobar el funcionamiento de la práctica:
 	
-	Descripción de pruebas realizadas para verificar:
-	\begin{itemize}
-		\item Acceso entre VLANs según política.
-		\item Acceso a servicios desde Internet.
-		\item Funcionamiento de NAT.
-		\item Tráfico de gestión (SSH).
-	\end{itemize}
+	\subsection{Pruebas realizadas desde la VLAN 18}
+	
+	% --- Pruebas de conectividad entre VLANs ---
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathTests PRUEBAS_PINGS_VLAN18.png}
+		\caption{Pruebas de ping realizadas desde la VLAN 18.}
+		\label{fig:pruebas_pings_vlan18}
+	\end{figure}
+	
+
+	\subsection{Pruebas realizadas desde la VLAN 16}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathTests zbfw/vlan16tovlan16ok.png}
+		\caption{Tráfico permitido dentro de la misma VLAN (VLAN16).}
+		\label{fig:zbfw_vlan16_vlan16_ok}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathTests zbfw/vlan16_to_core.png}
+		\caption{Prueba de conectividad desde VLAN16 hacia el core.}
+		\label{fig:zbfw_vlan16_core}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathTests zbfw/vlan16_to_adm_and_serv.png}
+		\caption{Prueba de conectividad desde VLAN16 hacia VLAN de administración y servicios.}
+		\label{fig:zbfw_vlan16_adm_serv}
+	\end{figure}
+
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathTests zbfw/vlan16tovlan17and18.png}
+		\caption{Comprobación de restricciones entre VLAN16, VLAN17 y VLAN18.}
+		\label{fig:zbfw_vlan16_vlan17_18}
+	\end{figure}
+	
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=\textwidth]{\pathTests zbfw/ping_vlan18_to_gateway.png}
+		\caption{Ping desde VLAN18 al gateway, filtrado por el ZBFW.}
+		\label{fig:zbfw_vlan18_gateway}
+	\end{figure}
+	
 	
 	\subsection{Comprobación de Reglas de Filtrado}
 	\label{sec:pruebas:filtrado}
 	
-	Uso de comandos como:
 	\begin{itemize}
 		\item \texttt{show access-lists}
 		\item \texttt{show ip nat translations}
@@ -205,24 +457,7 @@
 		\item \texttt{show policy-map type inspect}
 	\end{itemize}
 	
-	\section{Conclusiones}
-	\label{sec:conclusiones}
-	
-	\subsection{Resultados Obtenidos}
-	\label{sec:conclusiones:resultados}
-	
-	Resumen de los objetivos cumplidos y dificultades encontradas.
-	
-	\subsection{Comparativa CBAC vs ZBFW}
-	\label{sec:conclusiones:comparativa}
-	
-	Análisis comparativo de ambas tecnologías en el contexto del laboratorio.
-	
-	\subsection{Reflexiones sobre Seguridad Perimetral}
-	\label{sec:conclusiones:reflexiones}
-	
-	Consideraciones sobre la implementación de políticas de seguridad en entornos reales.
-	
+
 	\section{Running-Configs}
 	\label{sec:runningconfigs}
 	
