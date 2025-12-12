@@ -593,6 +593,40 @@
 		\label{fig:zbfw_zonas_interfaces}
 	\end{figure}
 	
+	\newpage
+	
+	\subsection*{Elección entre CBAC o ZBFW}
+	
+	\begin{table}[h]
+		\centering
+		\label{tab:comparativa}
+		\begin{tabular}{>{\bfseries}l p{5.5cm} p{5.5cm}}
+			\toprule
+			\textbf{} &    \textbf{CBAC} & \textbf{ZBFW} \\
+			\midrule
+			Seguridad & Permisivo por defecto & \textbf{Deniega por defecto} (principio deny-all) \\
+			\midrule
+			Mantenimiento & Reglas bidireccionales complejas & \textbf{Políticas unidireccionales} simples \\
+			\midrule
+			Escalabilidad & Baja: modificar ACLs por cada cambio & \textbf{Alta:} solo asignar interfaces a zonas \\
+			\midrule
+			Claridad & Lógica dispersa en múltiples ACLs & \textbf{Visibilidad unificada} en policy-maps \\
+			\bottomrule
+		\end{tabular}
+		\caption{Comparativa clave entre CBAC y ZBFW}
+	\end{table}
+	
+	\subsection*{Motivos principales para elegir ZBFW:}
+	
+	\begin{itemize}
+		\item \textbf{Seguridad robusta:} Bloqueo automático entre zonas no emparejadas
+		\item \textbf{Sencillez operativa:} Políticas definidas una vez por par de zonas
+		\item \textbf{Escalabilidad:} Añadir VLANs solo requiere asignarlas a zonas existentes
+		\item \textbf{Prevención de errores:} Configuraciones olvidadas no comprometen la seguridad
+	\end{itemize}
+	
+	Para esta topología con zonas definidas (INSIDE, DMZ, OUTSIDE), ZBFW proporciona mayor seguridad, menor complejidad y mejor escalabilidad que CBAC.
+	
 	\subsubsection{Filtrado en DL-SW1}
 	\label{sec:lab8:filtrado-switch}
 	
@@ -672,8 +706,7 @@
 	\begin{lstlisting}[language=bash, caption=Aplicación de ACLs en interfaces SVI, label=lst:aplicacion-acls-svi]
 		interface Vlan16
 		ip address 10.4.16.1 255.255.255.0
-		ip access-group VLAN16 in      ! Aplicar ACL entrada
-		ip helper-address 10.4.245.100 ! Reenvío DHCP
+		ip access-group VLAN16 in      ! Aplicar ACL entrada		ip helper-address 10.4.245.100 ! Reenvío DHCP
 		
 		interface Vlan17
 		ip address 10.4.17.1 255.255.255.0
