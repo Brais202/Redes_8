@@ -798,8 +798,52 @@
 		\caption{Pruebas de ping realizadas desde la VLAN 18.}
 		\label{fig:pruebas_pings_vlan18}
 	\end{figure}
-	
 
+    \subsection{Pruebas realizadas desde la VLAN 17}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{\pathTests VLAN17_ping_vlan16.png}
+    \caption{Intento de ping a VLAN 16 bloqueado (aislamiento entre VLANs).}
+    \label{fig:vlan17_ping_vlan16_denied}
+    \end{figure}
+    
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.8\textwidth]{\pathTests VLAN17_ping_vlan18.png}
+        \caption{Intento de ping a VLAN 18 bloqueado (aislamiento entre VLANs).}
+        \label{fig:vlan17_ping_vlan18_denied}
+    \end{figure}
+    
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.8\textwidth]{\pathTests VLAN17_ping_administracion.png}
+        \caption{Intento de ping a VLAN de administración bloqueado.}
+        \label{fig:vlan17_ping_admin_denied}
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{\pathTests VLAN17_ping_servicios.png}
+    \caption{Ping desde VLAN 17 al servidor de servicios.}
+    \label{fig:vlan17_ping_servicios}
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{\pathTests VLAN17_ping_enlace.png}
+    \caption{Ping desde VLAN 17 a su gateway (10.4.17.1).}
+    \label{fig:vlan17_ping_gateway}
+    \end{figure}
+    
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.8\textwidth]{\pathTests VLAN17_ping_a_pc_en_vlan17.png}
+        \caption{Ping dentro de la misma VLAN 17 (10.4.17.12).}
+        \label{fig:vlan17_ping_intra_vlan}
+    \end{figure}
+
+    
 	\subsection{Pruebas realizadas desde la VLAN 16}
 	\begin{figure}[H]
 		\centering
@@ -846,6 +890,31 @@
 		\item \texttt{show zone-pair security}
 		\item \texttt{show policy-map type inspect}
 	\end{itemize}
+
+    \subsection{Pruebas de NAT y acceso externo}
+    \label{sec:pruebas:nat_externo}
+    
+    Para verificar la correcta configuración del NAT (Network Address Translation) y el port forwarding en el router CPE, se realizaron pruebas desde un equipo conectado a la red del ISP.
+    
+    \paragraph{Prueba de conectividad a la IP pública:}
+    Se verificó la conectividad básica a la dirección IP pública asignada para los servicios (192.0.4.203). Como muestra la Figura \ref{fig:ping_ip_nat}, el ping a esta dirección es exitoso, confirmando que el router CPE responde a las solicitudes ICMP entrantes.
+    
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.8\textwidth]{\pathTests Ping_a_ip_nat.png}
+        \caption{Ping exitoso a la dirección IP pública 192.0.4.203 desde la red del ISP.}
+        \label{fig:ping_ip_nat}
+    \end{figure}
+    
+    \paragraph{Prueba de acceso HTTPS desde Internet:}
+    Se comprobó el acceso al servicio HTTPS mediante port forwarding. Como se observa en la Figura \ref{fig:https_desde_isp}, un cliente externo puede acceder correctamente al servidor web interno a través de la dirección pública, demostrando que el port forwarding para el puerto 443 está configurado correctamente.
+    
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.8\textwidth]{\pathTests Prueba_https_a_ip_servicios_desde_pc_conectado_a_isp.png}
+        \caption{Acceso HTTPS exitoso a la IP pública 192.0.4.203 desde un equipo en la red del ISP.}
+        \label{fig:https_desde_isp}
+    \end{figure}
 	
 
 	\section{Running-Configs}
